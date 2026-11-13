@@ -1,0 +1,150 @@
+"""Catálogo de agentes e configuração padrão do AgentKit.
+
+Tudo que é "portável" mora aqui: cada projeto só sobrescreve o que precisa
+no próprio agentkit.yaml.
+"""
+from __future__ import annotations
+
+import copy
+
+# Aliases aceitos pelo Claude Code e pelo Agent SDK. Também é possível
+# informar um ID completo (ex.: "claude-sonnet-5-5") na interface.
+MODEL_OPTIONS = ["haiku", "sonnet", "opus", "inherit"]
+
+# Metadados de cada agente. "tools" segue o princípio do menor privilégio.
+AGENTS: dict[str, dict] = {
+    "orchestrator": {
+        "title": "Orquestrador",
+        "summary": "Planeja a tarefa e delega aos outros agentes na ordem certa.",
+        "tools": [],  # roda na sessão principal; não vira arquivo em .claude/agents
+        "default_model": "opus",
+        "main_thread": True,
+    },
+    "architect": {
+        "title": "Arquiteto",
+        "summary": "Planeja mudanças estruturais e avalia impacto arquitetural.",
+        "tools": ["Read", "Grep", "Glob", "Bash"],
+        "default_model": "opus",
+    },
+    "code-writer": {
+        "title": "Escritor",
+        "summary": "Implementa funcionalidades e correções seguindo os padrões do projeto.",
+        "tools": ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],
+        "default_model": "sonnet",
+    },
+    "code-reviewer": {
+        "title": "Revisor",
+        "summary": "Revisa as mudanças locais: bugs, segurança, legibilidade e testes.",
+        "tools": ["Read", "Grep", "Glob", "Bash"],
+        "default_model": "sonnet",
+    },
+    "pr-reviewer": {
+        "title": "Revisor de commit/PR",
+        "summary": "Revisa commits e pull requests contra a branch base.",
+        "tools": ["Read", "Grep", "Glob", "Bash"],
+        "default_model": "sonnet",
+    },
+    "deployer": {
+        "title": "Deployer",
+        "summary": "Executa o deploy configurado com checagens e confirmação.",
+        "tools": ["Read", "Bash"],
+        "default_model": "sonnet",
+    },
+    "release-summary": {
+        "title": "Release summary",
+        "summary": "Resume commits, PRs e mudanças de código entre duas versões.",
+        "tools": ["Read", "Grep", "Glob", "Bash", "Write"],
+        "default_model": "haiku",
+    },
+    "guardrail": {
+        "title": "Guardrail",
+        "summary": "Barra segredos, caminhos protegidos e mudanças de risco antes do commit/deploy.",
+        "tools": ["Read", "Grep", "Glob", "Bash"],
+        "default_model": "haiku",
+    },
+}
+
+DEFAULT_CONFIG: dict = {
+    "version": 1,
+    "project": {
+        "name": "",
+        "description": "",
+        "language": "",
+        "frameworks": [],
+        "base_branch": "main",
+        "conventions": "",
+        "commit_convention": "conventional",  # conventional | free
+    },
+    "commands": {
+        "install": "",
+        "test": "",
+        "lint": "",
+        "typecheck": "",
+        "build": "",
+        "deploy_staging": "",
+        "deploy_production": "",
+        "health_check": "",
+        "rollback": "",
+    },
+    "agents": {
+        name: {
+            "enabled": True,
+            "model": meta["default_model"],
+            "extra_instructions": "",
+        }
+        for name, meta in AGENTS.items()
+    },
+    "guardrails": {
+        "python_cmd": "python3",
+        "blocked_commands": [
+            r"rm\s+-rf\s+(/|~|\$HOME)(\s|$)",
+            r"git\s+push\s+.*(--force|-f)(\s|$)",
+            r"git\s+reset\s+--hard\s+origin",
+            r"DROP\s+(DATABASE|SCHEMA)",
+            r"mkfs\.",
+            r":\(\)\s*\{\s*:\|:&\s*\};:",
+            r"curl[^|]*\|\s*(sudo\s+)?(ba)?sh",
+        ],
+        "confirm_commands": [
+            r"git\s+push",
+            r"(kubectl|helm)\s+(apply|delete|upgrade|rollback)",
+            r"terraform\s+(apply|destroy)",
+            r"(npm|pnpm|yarn)\s+publish",
+            r"vercel\s+.*--prod",
+        ],
+        "protected_paths": [
+            ".env",
+            ".env.*",
+            "**/*.pem",
+            "**/*.key",
+            "**/secrets/**",
+            ".git/**",
+        ],
+        "scan_secrets": True,
+        "require_confirmation_for_production": True,
+        "max_files_per_change": 30,
+    },
+    "ci": {
+        "github_actions": False,
+        # como o CI instala o AgentKit (ajuste para o seu repositório ou índice privado)
+        "install_spec": "agentkit @ git+https://github.com/SEU-USUARIO/agentkit.git",
+        "post_review_comment": True,
+        "permission_mode": "acceptEdits",
+        "max_turns": 40,
+        "max_budget_usd": 5.0,
+    },
+    "rag": {
+        "enabled": False,
+        "provider": "chroma",  # chroma | pgvector | qdrant
+        "embedding_model": "voyage-3",
+        "sources": ["docs/**/*.md", "README.md"],
+        "chunk_size": 1200,
+        "chunk_overlap": 150,
+        "top_k": 6,
+        "connection": "",
+    },
+}
+
+
+def default_config() -> dict:
+    return copy.deepcopy(DEFAULT_CONFIG)

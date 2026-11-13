@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentKit</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f5d50'/%3E%3Ctext x='16' y='22' font-size='16' text-anchor='middle' fill='white' font-family='sans-serif'%3EA%3C/text%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f6f5f2;--panel:#fff;--ink:#1c1c1a;--muted:#6b6a65;--line:#e4e2dc;--soft:#efede8;
+  --accent:#2f5d50;--accent-ink:#fff;--warn:#a15c07;--bad:#b42318;--good:#1f7a4a;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#161615;--panel:#1f1f1d;--ink:#ecebe6;--muted:#9c9a93;--line:#33322f;--soft:#2a2927;
+  --accent:#7fb8a4;--accent-ink:#10201b;--warn:#e0a24a;--bad:#f0857a;--good:#6fcf97;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:14px 22px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5}
+header h1{font-size:16px;margin:0;letter-spacing:.2px}
+header .ver{color:var(--muted);font-size:12px}
+header .path{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--muted);max-width:50vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.layout{display:grid;grid-template-columns:280px 1fr;min-height:calc(100vh - 55px)}
+aside{border-right:1px solid var(--line);padding:18px;background:var(--panel)}
+main{padding:22px 28px 110px;max-width:980px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:0 0 10px}
+h3{margin:0 0 4px;font-size:15px}
+label{display:block;font-size:12px;color:var(--muted);margin:12px 0 4px}
+input[type=text],input[type=number],select,textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);font:inherit}
+textarea{font-family:var(--mono);font-size:12.5px;min-height:70px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+button{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 14px;border-radius:7px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button.small{padding:4px 9px;font-size:12px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:8px;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+.recent{list-style:none;padding:0;margin:6px 0 0}
+.recent li{padding:7px 9px;border-radius:6px;cursor:pointer;overflow:hidden}
+.recent li:hover{background:var(--soft)}
+.recent .n{font-weight:600}.recent .p{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px;flex-wrap:wrap}
+.tab{border:none;background:none;padding:9px 13px;border-bottom:2px solid transparent;border-radius:0;color:var(--muted)}
+.tab.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.pane{display:none}.pane.on{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:12px}
+.card.off{opacity:.55}
+.agent-head{display:flex;align-items:center;gap:12px}
+.agent-head .sum{color:var(--muted);font-size:13px}
+.agent-head .ctl{margin-left:auto;display:flex;gap:8px;align-items:center}
+.agent-head select{width:auto}
+.tools{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px}
+.switch{position:relative;width:38px;height:22px;flex:none}
+.switch input{opacity:0;width:0;height:0}
+.switch span{position:absolute;inset:0;background:var(--line);border-radius:22px;transition:.15s;cursor:pointer}
+.switch span:before{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;background:var(--panel);border-radius:50%;transition:.15s}
+.switch input:checked+span{background:var(--accent)}
+.switch input:checked+span:before{transform:translateX(16px)}
+.check{display:flex;gap:8px;align-items:center;margin:12px 0 0;color:var(--ink);font-size:13px}
+.hint{color:var(--muted);font-size:12px;margin:4px 0 0}
+.badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;background:var(--soft);color:var(--muted);margin-left:6px}
+.empty{color:var(--muted);padding:40px 0;text-align:center}
+.bar{position:fixed;left:280px;right:0;bottom:0;background:var(--panel);border-top:1px solid var(--line);padding:12px 28px;display:flex;gap:10px;align-items:center;z-index:4}
+.bar .msg{color:var(--muted);font-size:13px;margin-right:auto}
+.plan{font-family:var(--mono);font-size:12.5px;margin:0;padding:0;list-style:none}
+.plan li{display:flex;gap:12px;padding:4px 0;border-bottom:1px dashed var(--line)}
+.plan .st{width:130px;flex:none}
+.st-novo,.st-adicionar{color:var(--good)}.st-atualizar,.st-mesclar{color:var(--accent)}.st-conflito,.st-remover{color:var(--warn)}.st-igual{color:var(--muted)}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);padding:0;width:min(820px,94vw);max-height:86vh}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+.dlg-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.dlg-h b{margin-right:auto}
+.dlg-b{padding:14px 16px;overflow:auto;max-height:68vh}
+pre.md{white-space:pre-wrap;font-family:var(--mono);font-size:12.5px;margin:0}
+.dirs{list-style:none;padding:0;margin:0}
+.dirs li{padding:6px 8px;border-radius:6px;cursor:pointer;display:flex;gap:8px}
+.dirs li:hover{background:var(--soft)}
+.toast{position:fixed;right:20px;top:70px;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:8px;opacity:0;transition:.2s;z-index:20;max-width:420px}
+.toast.on{opacity:1}
+@media (max-width:820px){.layout{grid-template-columns:1fr}aside{border-right:none;border-bottom:1px solid var(--line)}.bar{left:0}.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>AgentKit</h1><span class="ver" id="ver"></span>
+  <span class="path" id="curPath">nenhum projeto aberto</span>
+</header>
+
+<div class="layout">
+<aside>
+  <h2>Projeto</h2>
+  <label for="pathIn">Caminho absoluto do diretório</label>
+  <input type="text" id="pathIn" placeholder="/home/voce/projetos/app">
+  <div class="row" style="margin-top:8px">
+    <button class="primary" id="openBtn">Abrir</button>
+    <button id="browseBtn">Procurar…</button>
+  </div>
+  <h2 style="margin-top:26px">Recentes</h2>
+  <ul class="recent" id="recent"><li class="hint" style="cursor:default">Nenhum ainda.</li></ul>
+</aside>
+
+<main>
+  <div id="empty" class="empty">
+    <h3>Escolha um diretório para começar</h3>
+    <p>O AgentKit detecta a linguagem, os comandos e a branch base, e você ajusta o resto aqui.</p>
+  </div>
+
+  <div id="editor" hidden>
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-t="proj">Projeto</button>
+      <button class="tab" data-t="cmds">Comandos</button>
+      <button class="tab" data-t="agents">Agentes e modelos</button>
+      <button class="tab" data-t="guard">Guardrails</button>
+      <button class="tab" data-t="ci">CI / Agent SDK</button>
+      <button class="tab" data-t="rag">RAG <span class="badge">em breve</span></button>
+    </div>
+
+    <section class="pane on" id="p-proj">
+      <div class="card">
+        <div class="grid2">
+          <div><label>Nome</label><input type="text" data-k="project.name"></div>
+          <div><label>Branch base</label><input type="text" data-k="project.base_branch"></div>
+          <div><label>Linguagem</label><input type="text" data-k="project.language"></div>
+          <div><label>Frameworks (separados por vírgula)</label><input type="text" data-k="project.frameworks" data-list=","></div>
+        </div>
+        <label>Descrição curta</label><input type="text" data-k="project.description" placeholder="O que este projeto faz, em uma linha">
+        <label>Convenção de commits</label>
+        <select data-k="project.commit_convention"><option value="conventional">Conventional Commits</option><option value="free">Livre</option></select>
+        <label>Convenções do projeto (vão para o CLAUDE.md e para todos os agentes)</label>
+        <textarea data-k="project.conventions" rows="6" placeholder="- Use repository pattern em src/data&#10;- Componentes React em PascalCase&#10;- Toda rota nova precisa de teste de integração"></textarea>
+      </div>
+      <p class="hint" id="detected"></p>
+    </section>
+
+    <section class="pane" id="p-cmds">
+      <div class="card">
+        <p class="hint" style="margin-top:0">Os agentes usam exatamente estes comandos. Deixe em branco o que não existir. O deploy é genérico: qualquer comando de shell serve (script, make, docker, kubectl, CLI do provedor).</p>
+        <div class="grid2" id="cmdGrid"></div>
+      </div>
+    </section>
+
+    <section class="pane" id="p-agents"><div id="agentList"></div></section>
+
+    <section class="pane" id="p-guard">
+      <div class="card">
+        <h3>Hook determinístico</h3>
+        <p class="hint">Roda antes de cada comando ou edição, inclusive no Agent SDK. Uma regra por linha (expressões regulares para comandos; globs para caminhos).</p>
+        <label>Comandos bloqueados</label><textarea data-k="guardrails.blocked_commands" data-list="\n" rows="6"></textarea>
+        <label>Comandos que pedem confirmação humana</label><textarea data-k="guardrails.confirm_commands" data-list="\n" rows="5"></textarea>
+        <label>Caminhos protegidos (agentes não podem alterar)</label><textarea data-k="guardrails.protected_paths" data-list="\n" rows="5"></textarea>
+        <div class="grid2">
+          <div><label>Máximo de arquivos por mudança</label><input type="number" data-k="guardrails.max_files_per_change" data-num></div>
+          <div><label>Comando Python do hook</label><input type="text" data-k="guardrails.python_cmd"><p class="hint">Use <code>python</code> ou <code>py</code> no Windows.</p></div>
+        </div>
+        <label class="check"><input type="checkbox" data-k="guardrails.scan_secrets"> Procurar segredos em comandos e arquivos</label>
+        <label class="check"><input type="checkbox" data-k="guardrails.require_confirmation_for_production"> Deploy em produção exige confirmação explícita</label>
+      </div>
+    </section>
+
+    <section class="pane" id="p-ci">
+      <div class="card">
+        <h3>Execução fora do Claude Code</h3>
+        <p class="hint">Valem para <code>agentkit run</code>, <code>agentkit agent</code>, <code>agentkit review</code> e <code>agentkit release</code>.</p>
+        <div class="grid2">
+          <div><label>Modo de permissão</label>
+            <select data-k="ci.permission_mode"><option value="default">default (pergunta)</option><option value="acceptEdits">acceptEdits</option><option value="plan">plan (só planeja)</option><option value="dontAsk">dontAsk</option></select></div>
+          <div><label>Máximo de turnos</label><input type="number" data-k="ci.max_turns" data-num></div>
+          <div><label>Orçamento máximo por execução (US$)</label><input type="number" step="0.5" data-k="ci.max_budget_usd" data-num></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>GitHub Actions</h3>
+        <label class="check"><input type="checkbox" data-k="ci.github_actions"> Gerar workflow de revisão automática de PR</label>
+        <label class="check"><input type="checkbox" data-k="ci.post_review_comment"> Publicar a revisão como comentário no PR</label>
+        <label>Como o CI instala o AgentKit (pip)</label><input type="text" data-k="ci.install_spec">
+        <p class="hint">Crie o secret <code>ANTHROPIC_API_KEY</code> no repositório.</p>
+      </div>
+    </section>
+
+    <section class="pane" id="p-rag">
+      <div class="card">
+        <h3>RAG e banco vetorial</h3>
+        <p class="hint">A configuração já fica salva no agentkit.yaml; a indexação e o servidor MCP de busca entram na próxima fase.</p>
+        <label class="check"><input type="checkbox" data-k="rag.enabled"> Habilitar (sem efeito por enquanto)</label>
+        <div class="grid2">
+          <div><label>Banco vetorial</label><select data-k="rag.provider"><option>chroma</option><option>pgvector</option><option>qdrant</option></select></div>
+          <div><label>Modelo de embedding</label><input type="text" data-k="rag.embedding_model"></div>
+          <div><label>Tamanho do chunk (caracteres)</label><input type="number" data-k="rag.chunk_size" data-num></div>
+          <div><label>Sobreposição</label><input type="number" data-k="rag.chunk_overlap" data-num></div>
+          <div><label>Resultados por busca (top-k)</label><input type="number" data-k="rag.top_k" data-num></div>
+          <div><label>Conexão (pgvector/qdrant)</label><input type="text" data-k="rag.connection" placeholder="use variável de ambiente, ex.: ${DATABASE_URL}"></div>
+        </div>
+        <label>Fontes a indexar (globs, uma por linha)</label><textarea data-k="rag.sources" data-list="\n"></textarea>
+      </div>
+    </section>
+  </div>
+</main>
+</div>
+
+<div class="bar" id="bar" hidden>
+  <span class="msg" id="barMsg">Alterações não salvas são mantidas só nesta página.</span>
+  <label class="check" style="margin:0"><input type="checkbox" id="force"> Sobrescrever editados à mão</label>
+  <button id="planBtn">Ver o que vai mudar</button>
+  <button class="primary" id="installBtn">Salvar e instalar</button>
+</div>
+
+<dialog id="dlg">
+  <div class="dlg-h"><b id="dlgTitle"></b><span id="dlgExtra"></span><button class="small" id="dlgClose">Fechar</button></div>
+  <div class="dlg-b" id="dlgBody"></div>
+</dialog>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+let META = null, CFG = null, PATH = "";
+
+const CMD_LABELS = {install:"Instalar dependências",test:"Testes",lint:"Lint",typecheck:"Checagem de tipos",build:"Build",
+  deploy_staging:"Deploy staging",deploy_production:"Deploy produção",health_check:"Health check",rollback:"Rollback"};
+
+async function api(url, body){
+  const r = await fetch(url, body===undefined ? {} : {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(data.detail || r.statusText);
+  return data;
+}
+function toast(msg, ms=3200){const t=$("#toast");t.textContent=msg;t.classList.add("on");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),ms);}
+const get = (o,k)=>k.split(".").reduce((a,p)=>a?.[p],o);
+function set(o,k,v){const ps=k.split(".");const last=ps.pop();ps.reduce((a,p)=>a[p]??={},o)[last]=v;}
+const esc = s => String(s ?? "").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function bindField(el){
+  const k=el.dataset.k, list=el.dataset.list, num=el.dataset.num!==undefined;
+  const v=get(CFG,k);
+  if(el.type==="checkbox") el.checked=!!v;
+  else if(list) el.value=(v||[]).join(list==="\\n"?"\n":", ");
+  else el.value=v ?? "";
+  el.oninput=el.onchange=()=>{
+    let val;
+    if(el.type==="checkbox") val=el.checked;
+    else if(list){const sep=list==="\\n"?"\n":",";val=el.value.split(sep).map(s=>s.trim()).filter(Boolean);}
+    else if(num) val=el.value===""?null:Number(el.value);
+    else val=el.value;
+    set(CFG,k,val); dirty();
+  };
+}
+
+function renderCommands(det){
+  $("#cmdGrid").innerHTML=Object.entries(CMD_LABELS).map(([k,l])=>{
+    const d=det?.commands?.[k];
+    return `<div><label>${l}${d?'<span class="badge">detectado</span>':''}</label><input type="text" data-k="commands.${k}" placeholder="${d?esc(d):''}"></div>`;
+  }).join("");
+}
+
+function modelSelect(name){
+  const cur=CFG.agents[name].model, opts=META.models, custom=!opts.includes(cur);
+  return `<select data-model="${name}">${opts.map(m=>`<option ${m===cur?"selected":""}>${m}</option>`).join("")}
+    <option value="__custom" ${custom?"selected":""}>ID completo…</option></select>
+    <input type="text" data-custom="${name}" value="${custom?esc(cur):""}" placeholder="claude-sonnet-5-5" style="width:170px;${custom?"":"display:none"}">`;
+}
+
+function renderAgents(){
+  $("#agentList").innerHTML=Object.entries(META.agents).map(([name,m])=>{
+    const a=CFG.agents[name], main=!!m.main_thread;
+    return `<div class="card ${a.enabled?"":"off"}" id="ag-${name}">
+      <div class="agent-head">
+        ${main?"":`<label class="switch" title="Habilitar"><input type="checkbox" data-en="${name}" ${a.enabled?"checked":""}><span></span></label>`}
+        <div><h3>${esc(m.title)} <span class="badge">${name}</span></h3><div class="sum">${esc(m.summary)}</div></div>
+        <div class="ctl">${modelSelect(name)}
+          ${main?`<button class="small" data-prev="CLAUDE.md">Ver CLAUDE.md</button>`:`<button class="small" data-prev="${name}">Ver prompt</button>`}</div>
+      </div>
+      <div class="tools">${main?"Sessão principal do Claude Code (modelo vai para .claude/settings.json) e do agentkit run":"ferramentas: "+m.tools.join(", ")}</div>
+      <label>Instruções adicionais para este projeto</label>
+      <textarea data-k="agents.${name}.extra_instructions" rows="2" placeholder="Opcional"></textarea>
+    </div>`;}).join("");
+  $$("#agentList [data-k]").forEach(bindField);
+  $$("[data-en]").forEach(el=>el.onchange=()=>{const n=el.dataset.en;CFG.agents[n].enabled=el.checked;$("#ag-"+n).classList.toggle("off",!el.checked);dirty();});
+  $$("[data-model]").forEach(el=>el.onchange=()=>{
+    const n=el.dataset.model, c=$(`[data-custom="${n}"]`);
+    if(el.value==="__custom"){c.style.display="";c.focus();}else{c.style.display="none";CFG.agents[n].model=el.value;dirty();}
+  });
+  $$("[data-custom]").forEach(el=>el.oninput=()=>{if(el.value.trim()){CFG.agents[el.dataset.custom].model=el.value.trim();dirty();}});
+  $$("[data-prev]").forEach(el=>el.onclick=()=>previewFile(el.dataset.prev));
+}
+
+function render(det, source){
+  $("#empty").hidden=true;$("#editor").hidden=false;$("#bar").hidden=false;
+  $("#curPath").textContent=PATH;
+  renderCommands(det);
+  $$("main [data-k]").forEach(bindField);
+  renderAgents();
+  const sig=det?.signals?.length?`Sinais encontrados: ${det.signals.join(", ")}.`:"Nenhum arquivo de build reconhecido; preencha os comandos à mão.";
+  $("#detected").textContent=`Configuração carregada de: ${source}. ${sig}${det && !det.is_git?" Atenção: o diretório não é um repositório git.":""}`;
+  $("#barMsg").textContent=source==="agentkit.yaml"?"Projeto já configurado. Ajuste e reinstale quando quiser.":"Projeto novo: revise os campos e clique em “Salvar e instalar”.";
+}
+function dirty(){$("#barMsg").textContent="Alterações pendentes — clique em “Salvar e instalar”.";}
+
+async function openProject(path){
+  try{
+    const r=await api("/api/load",{path});
+    PATH=path;CFG=r.config;$("#pathIn").value=path;render(r.detected,r.source);
+  }catch(e){toast(e.message,5000);}
+}
+
+function dialog(title, html, extra=""){$("#dlgTitle").textContent=title;$("#dlgExtra").innerHTML=extra;$("#dlgBody").innerHTML=html;$("#dlg").showModal();}
+$("#dlgClose").onclick=()=>$("#dlg").close();
+
+async function previewFile(file){
+  try{const r=await api("/api/preview",{path:PATH,config:CFG,file});
+    dialog(file==="CLAUDE.md"?"Seção gerenciada do CLAUDE.md":`.claude/agents/${file}.md`,`<pre class="md">${esc(r.content)}</pre>`);
+  }catch(e){toast(e.message);}
+}
+
+$("#planBtn").onclick=async()=>{
+  try{const r=await api("/api/plan",{path:PATH,config:CFG});
+    const html=`<ul class="plan">${r.files.map(f=>`<li><span class="st st-${f.status.split(" ")[0]}">${f.status}</span><span>${esc(f.path)}</span></li>`).join("")}</ul>
+      <p class="hint">“conflito” = você editou o arquivo à mão; a versão nova vai para <code>*.agentkit-new</code>, a não ser que marque “Sobrescrever”.</p>`;
+    dialog("O que vai mudar",html);
+  }catch(e){toast(e.message);}
+};
+
+$("#installBtn").onclick=async()=>{
+  const b=$("#installBtn");b.disabled=true;
+  try{const r=await api("/api/install",{path:PATH,config:CFG,force:$("#force").checked});
+    CFG=r.config;const rep=r.report;
+    let html=`<p><b>${rep.written.length}</b> arquivo(s) gravado(s), <b>${rep.unchanged.length}</b> sem mudança.</p>`;
+    if(rep.conflicts.length) html+=`<p style="color:var(--warn)">Conflitos (versão nova em *.agentkit-new):</p><ul class="plan">${rep.conflicts.map(f=>`<li>${esc(f)}</li>`).join("")}</ul>`;
+    if(rep.removed.length) html+=`<p>Removidos (agentes desabilitados):</p><ul class="plan">${rep.removed.map(f=>`<li>${esc(f)}</li>`).join("")}</ul>`;
+    html+=`<p class="hint">Abra o projeto no Claude Code e use <code>/ship &lt;tarefa&gt;</code>, <code>/review-pr</code>, <code>/release-notes</code> ou <code>/deploy</code>. Fora dele: <code>agentkit run "tarefa" -C ${esc(PATH)}</code>.</p>`;
+    dialog("Instalado ✔",html);$("#barMsg").textContent="Tudo salvo e instalado.";loadRecent();
+  }catch(e){toast(e.message,6000);}finally{b.disabled=false;}
+};
+
+async function browse(path){
+  try{const r=await api("/api/browse?path="+encodeURIComponent(path||""));
+    const list=(r.parent?`<li data-go="${esc(r.parent)}">⬆️ <span>..</span></li>`:"")+
+      r.dirs.map(d=>`<li data-go="${esc(d.path)}">${d.is_project?"📦":"📁"} <span>${esc(d.name)}</span></li>`).join("");
+    dialog(r.path,`<ul class="dirs">${list||'<li class="hint">Sem subpastas.</li>'}</ul>`,`<button class="small primary" id="pickDir">Usar esta pasta</button>`);
+    $$("#dlgBody [data-go]").forEach(li=>li.onclick=()=>browse(li.dataset.go));
+    $("#pickDir").onclick=()=>{$("#dlg").close();openProject(r.path);};
+  }catch(e){toast(e.message);}
+}
+
+async function loadRecent(){
+  const m=await api("/api/meta");META=m;
+  $("#recent").innerHTML=m.recent.length?m.recent.map(r=>`<li data-p="${esc(r.path)}"><div class="n">${esc(r.name)}</div><div class="p">${esc(r.path)}</div></li>`).join("")
+    :'<li class="hint" style="cursor:default">Nenhum ainda.</li>';
+  $$("#recent [data-p]").forEach(li=>li.onclick=()=>openProject(li.dataset.p));
+  return m;
+}
+
+$$(".tab").forEach(t=>t.onclick=()=>{$$(".tab").forEach(x=>x.classList.toggle("on",x===t));$$(".pane").forEach(p=>p.classList.toggle("on",p.id==="p-"+t.dataset.t));});
+$("#openBtn").onclick=()=>{const p=$("#pathIn").value.trim();if(p)openProject(p);else toast("Informe um caminho.");};
+$("#pathIn").onkeydown=e=>{if(e.key==="Enter")$("#openBtn").click();};
+$("#browseBtn").onclick=()=>browse($("#pathIn").value.trim());
+
+loadRecent().then(m=>{$("#ver").textContent="v"+m.version;if(m.start_path)openProject(m.start_path);}).catch(e=>toast(e.message));
+</script>
+</body>
+</html>
