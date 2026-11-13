@@ -64,20 +64,20 @@ def remember(project: str | Path, name: str = "") -> None:
     project = str(Path(project).expanduser().resolve())
     try:
         RECENT_FILE.parent.mkdir(parents=True, exist_ok=True)
-        items = json.loads(RECENT_FILE.read_text()) if RECENT_FILE.exists() else []
+        items = json.loads(RECENT_FILE.read_text(encoding="utf-8")) if RECENT_FILE.exists() else []
     except (OSError, json.JSONDecodeError):
         items = []
     items = [i for i in items if i.get("path") != project]
     items.insert(0, {"path": project, "name": name or Path(project).name})
     try:
-        RECENT_FILE.write_text(json.dumps(items[:15], indent=2, ensure_ascii=False))
+        RECENT_FILE.write_text(json.dumps(items[:15], indent=2, ensure_ascii=False), encoding="utf-8")
     except OSError:
         pass
 
 
 def recent() -> list[dict]:
     try:
-        items = json.loads(RECENT_FILE.read_text())
+        items = json.loads(RECENT_FILE.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return []
     return [i for i in items if Path(i["path"]).exists()]

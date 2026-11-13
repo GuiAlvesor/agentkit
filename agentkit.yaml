@@ -1,0 +1,109 @@
+# Configuração do AgentKit para este projeto.
+# Edite pela interface (agentkit gui) ou à mão e rode `agentkit install`.
+version: 1
+project:
+  name: AgentKit
+  description: Kit portátil de agentes (Claude Code + Agent SDK) com interface de configuração.
+  language: python
+  frameworks:
+  - fastapi
+  - jinja2
+  - claude-agent-sdk
+  base_branch: main
+  conventions: '- Tudo em português (código comentado, mensagens, interface).
+
+    - Ler/gravar arquivos com encoding="utf-8".
+
+    - O hook de guardrail usa só a biblioteca padrão.
+
+    - Dependências de RAG devem ser opcionais (extra [rag]).
+
+    - Testes nunca chamam APIs externas.'
+  commit_convention: conventional
+commands:
+  install: pip install -e ".[dev]"
+  test: pytest -q
+  lint: ''
+  typecheck: ''
+  build: ''
+  deploy_staging: ''
+  deploy_production: ''
+  health_check: ''
+  rollback: ''
+agents:
+  orchestrator:
+    enabled: true
+    model: opus
+    extra_instructions: ''
+  architect:
+    enabled: true
+    model: opus
+    extra_instructions: ''
+  code-writer:
+    enabled: true
+    model: sonnet
+    extra_instructions: ''
+  code-reviewer:
+    enabled: true
+    model: sonnet
+    extra_instructions: ''
+  pr-reviewer:
+    enabled: true
+    model: sonnet
+    extra_instructions: ''
+  deployer:
+    enabled: false
+    model: sonnet
+    extra_instructions: ''
+  release-summary:
+    enabled: true
+    model: haiku
+    extra_instructions: ''
+  guardrail:
+    enabled: true
+    model: haiku
+    extra_instructions: ''
+guardrails:
+  python_cmd: python
+  blocked_commands:
+  - rm\s+-rf\s+(/|~|\$HOME)(\s|$)
+  - git\s+push\s+.*(--force|-f)(\s|$)
+  - git\s+reset\s+--hard\s+origin
+  - DROP\s+(DATABASE|SCHEMA)
+  - mkfs\.
+  - ':\(\)\s*\{\s*:\|:&\s*\};:'
+  - curl[^|]*\|\s*(sudo\s+)?(ba)?sh
+  confirm_commands:
+  - git\s+push
+  - (kubectl|helm)\s+(apply|delete|upgrade|rollback)
+  - terraform\s+(apply|destroy)
+  - (npm|pnpm|yarn)\s+publish
+  - vercel\s+.*--prod
+  protected_paths:
+  - .env
+  - .env.*
+  - '**/*.pem'
+  - '**/*.key'
+  - '**/secrets/**'
+  - .git/**
+  scan_secrets: true
+  require_confirmation_for_production: true
+  max_files_per_change: 30
+ci:
+  github_actions: false
+  install_spec: agentkit @ git+https://github.com/SEU-USUARIO/agentkit.git
+  post_review_comment: true
+  permission_mode: acceptEdits
+  max_turns: 40
+  max_budget_usd: 5.0
+rag:
+  enabled: false
+  provider: chroma
+  embedding_model: voyage-3
+  sources:
+  - docs/**/*.md
+  - README.md
+  chunk_size: 1200
+  chunk_overlap: 150
+  top_k: 6
+  connection: ''

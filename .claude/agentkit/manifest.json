@@ -1,0 +1,13 @@
+{
+  ".claude/agents/architect.md": "be9cbd8c21e187b789ac05876b3fab7ac623caf7f5a96be6e3504e9dba76acd5",
+  ".claude/agents/code-writer.md": "5e6f3d160811ac495f5db6a8352cf6b749cded748fe7f3bcc8af4da24f4db40f",
+  ".claude/agents/code-reviewer.md": "30ce928588026a534655e276f494b8a8204b88686b29ce15796b9909e060fd4f",
+  ".claude/agents/pr-reviewer.md": "bf14d0284b7178171a538e264698378b1f0161ea747a1bdd3834011a87046f06",
+  ".claude/agents/release-summary.md": "724784a74721f5ab540b8fc0172901dbd09629f9f517647466e64abcc3ba281e",
+  ".claude/agents/guardrail.md": "aa6feaf7e3b3f211a125f029a07d4b69110f9bd9be816302a66a799106ea1120",
+  ".claude/commands/ship.md": "69344ca5fc3a269e37604ef285a6a64c8cfa87fa985d34b47acedc22aa9421fb",
+  ".claude/commands/review-pr.md": "765990f0f9afe677dd6d3b64789c1e45b541083e4259b6d83a5a081fa5f0d34d",
+  ".claude/commands/release-notes.md": "1bfb4be77a73d2ed5f26b4f39d52051d7e14aef27c55c9b5b02ccc5592bad251",
+  ".claude/hooks/agentkit_guardrail.py": "023c559dee90729057781e3fd7f4ae2f7d40dc693d9868b00cf3878cd30c0b3e",
+  ".claude/agentkit/guardrails.json": "c78d690b4189c5508052eac79bfac1e7e894454375898cefdfb842a39d5c9c73"
+}

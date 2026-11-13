@@ -73,6 +73,11 @@ def cmd_release(a):
 
 
 def main(argv=None):
+    for stream in (sys.stdout, sys.stderr):  # console do Windows (cp1252) e emojis
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     p = argparse.ArgumentParser(prog="agentkit", description="Kit portátil de agentes para Claude Code e Agent SDK")
     p.add_argument("--version", action="version", version=__version__)
     sub = p.add_subparsers(dest="cmd", required=True)

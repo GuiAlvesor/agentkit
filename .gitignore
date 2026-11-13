@@ -3,3 +3,8 @@ __pycache__/
 .pytest_cache/
 build/
 dist/
+
+# AgentKit
+.claude/agentkit/guardrail.log
+*.agentkit-new
+.claude/settings.local.json

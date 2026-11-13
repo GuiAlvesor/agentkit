@@ -1,0 +1,28 @@
+{
+  "blocked_commands": [
+    "rm\\s+-rf\\s+(/|~|\\$HOME)(\\s|$)",
+    "git\\s+push\\s+.*(--force|-f)(\\s|$)",
+    "git\\s+reset\\s+--hard\\s+origin",
+    "DROP\\s+(DATABASE|SCHEMA)",
+    "mkfs\\.",
+    ":\\(\\)\\s*\\{\\s*:\\|:&\\s*\\};:",
+    "curl[^|]*\\|\\s*(sudo\\s+)?(ba)?sh"
+  ],
+  "confirm_commands": [
+    "git\\s+push",
+    "(kubectl|helm)\\s+(apply|delete|upgrade|rollback)",
+    "terraform\\s+(apply|destroy)",
+    "(npm|pnpm|yarn)\\s+publish",
+    "vercel\\s+.*--prod"
+  ],
+  "protected_paths": [
+    ".env",
+    ".env.*",
+    "**/*.pem",
+    "**/*.key",
+    "**/secrets/**",
+    ".git/**"
+  ],
+  "scan_secrets": true,
+  "max_files_per_change": 30
+}

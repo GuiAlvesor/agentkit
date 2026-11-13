@@ -6,6 +6,7 @@ no próprio agentkit.yaml.
 from __future__ import annotations
 
 import copy
+import sys
 
 # Aliases aceitos pelo Claude Code e pelo Agent SDK. Também é possível
 # informar um ID completo (ex.: "claude-sonnet-5-5") na interface.
@@ -95,7 +96,8 @@ DEFAULT_CONFIG: dict = {
         for name, meta in AGENTS.items()
     },
     "guardrails": {
-        "python_cmd": "python3",
+        # no Windows "python3" costuma ser só o atalho da Microsoft Store
+        "python_cmd": "python" if sys.platform == "win32" else "python3",
         "blocked_commands": [
             r"rm\s+-rf\s+(/|~|\$HOME)(\s|$)",
             r"git\s+push\s+.*(--force|-f)(\s|$)",
