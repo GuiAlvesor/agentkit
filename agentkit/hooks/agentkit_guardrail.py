@@ -123,8 +123,8 @@ def decide(payload: dict, cfg: dict, root: Path) -> tuple[str, str] | None:
 
 
 def main() -> int:
-    try:
-        payload = json.load(sys.stdin)
+    try:  # bytes + UTF-8 explícito: no Windows o stdin padrão é cp1252
+        payload = json.loads(sys.stdin.buffer.read().decode("utf-8", errors="replace"))
     except json.JSONDecodeError:
         return 0  # entrada inesperada: não bloqueia, mas também não decide nada
     root = project_dir()
@@ -134,13 +134,15 @@ def main() -> int:
         return 0
     decision, reason = result
     log(root, decision, payload.get("tool_name", ""), reason)
-    print(json.dumps({
+    out = json.dumps({
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
             "permissionDecision": decision,
             "permissionDecisionReason": f"[AgentKit guardrail] {reason}",
         }
-    }, ensure_ascii=False))
+    }, ensure_ascii=False)
+    sys.stdout.buffer.write(out.encode("utf-8") + b"\n")
+    sys.stdout.flush()
     return 0
 
 

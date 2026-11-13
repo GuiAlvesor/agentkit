@@ -8,6 +8,6 @@
   ".claude/commands/ship.md": "69344ca5fc3a269e37604ef285a6a64c8cfa87fa985d34b47acedc22aa9421fb",
   ".claude/commands/review-pr.md": "765990f0f9afe677dd6d3b64789c1e45b541083e4259b6d83a5a081fa5f0d34d",
   ".claude/commands/release-notes.md": "1bfb4be77a73d2ed5f26b4f39d52051d7e14aef27c55c9b5b02ccc5592bad251",
-  ".claude/hooks/agentkit_guardrail.py": "023c559dee90729057781e3fd7f4ae2f7d40dc693d9868b00cf3878cd30c0b3e",
+  ".claude/hooks/agentkit_guardrail.py": "def72080d779098413ae7cf9d5d860ad32cf020274ec5998b4f502fbc7b6b39a",
   ".claude/agentkit/guardrails.json": "c78d690b4189c5508052eac79bfac1e7e894454375898cefdfb842a39d5c9c73"
 }

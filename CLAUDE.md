@@ -42,8 +42,10 @@ tests/             pytest: detecção, instalação, preservação de edições,
 ```
 
 ## Comandos de desenvolvimento (Windows / PowerShell)
+O Python do projeto é gerenciado pelo **pyenv-win** (versão fixada em `.python-version`); o `.venv` é criado com esse Python.
 ```powershell
-.\setup.ps1                      # cria .venv e instala com dependências de dev
+pyenv versions                   # versões instaladas; a do projeto vem do .python-version
+.\setup.ps1                      # usa o Python do pyenv, cria .venv e instala com dependências de dev
 .venv\Scripts\Activate.ps1
 pytest -q                        # 16 testes devem passar
 agentkit gui                     # interface em http://localhost:8765

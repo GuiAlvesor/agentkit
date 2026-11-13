@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -104,10 +105,11 @@ def test_reinstall_preserves_user_edits(node_project):
 
 def run_hook(project, payload):
     out = subprocess.run([sys.executable, str(project / ".claude/hooks/agentkit_guardrail.py")],
-                         input=json.dumps(payload), capture_output=True, text=True,
-                         env={"CLAUDE_PROJECT_DIR": str(project), "PATH": "/usr/bin:/bin"})
-    assert out.returncode == 0, out.stderr
-    return json.loads(out.stdout)["hookSpecificOutput"]["permissionDecision"] if out.stdout.strip() else "allow"
+                         input=json.dumps(payload, ensure_ascii=False).encode("utf-8"), capture_output=True,
+                         env={**os.environ, "CLAUDE_PROJECT_DIR": str(project)})
+    assert out.returncode == 0, out.stderr.decode("utf-8", "replace")
+    stdout = out.stdout.decode("utf-8")
+    return json.loads(stdout)["hookSpecificOutput"]["permissionDecision"] if stdout.strip() else "allow"
 
 
 @pytest.mark.parametrize("payload,expected", [

@@ -22,7 +22,7 @@ git clone <seu-repo>/agentkit && cd agentkit
 pip install -e .            # ou: pipx install .
 ```
 
-No Windows (PowerShell): `.\setup.ps1` cria o `.venv` e instala tudo; depois `.venv\Scripts\Activate.ps1`.
+No Windows (PowerShell, com pyenv-win): `.\setup.ps1` usa o Python do `.python-version`, cria o `.venv` e instala tudo; depois `.venv\Scripts\Activate.ps1`.
 
 Requer Python 3.10+. Para rodar os agentes você precisa do Claude Code (uso interativo) e/ou de `ANTHROPIC_API_KEY` (Agent SDK/CI).
 
