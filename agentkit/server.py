@@ -166,8 +166,11 @@ def rag_search(body: SearchIn):
         hits = search(_dir(body.path), cfgmod.normalize(body.config), body.query, body.top_k)
     except SystemExit as exc:
         raise HTTPException(400, str(exc)) from exc
+    def body(text: str) -> str:  # o cabeçalho [arquivo · seção] já aparece no título do resultado
+        return text.split("\n", 1)[1] if text.startswith("[") and "\n" in text else text
+
     return {"hits": [{"source": h.chunk.source, "section": h.chunk.metadata.get("section", ""),
-                      "score": h.score, "text": h.chunk.text} for h in hits]}
+                      "score": h.score, "text": body(h.chunk.text)} for h in hits]}
 
 
 # ---------------------------------------------------------------- início de projeto

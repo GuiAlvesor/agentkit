@@ -72,6 +72,7 @@ def test_install_generates_everything(node_project):
     assert settings["model"] == "opus"
     assert "agentkit_guardrail" in settings["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
     assert "Edit(.env)" in settings["permissions"]["deny"]
+    assert not any(r.startswith("Write(") for r in settings["permissions"]["deny"])  # Write() é ignorado pelo Claude Code
 
     claude_md = (node_project / "CLAUDE.md").read_text(encoding="utf-8")
     assert "agentkit:start" in claude_md and "`code-writer`" in claude_md

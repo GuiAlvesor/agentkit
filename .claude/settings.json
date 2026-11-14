@@ -17,17 +17,11 @@
   "permissions": {
     "deny": [
       "Edit(.env)",
-      "Write(.env)",
       "Edit(.env.*)",
-      "Write(.env.*)",
       "Edit(**/*.pem)",
-      "Write(**/*.pem)",
       "Edit(**/*.key)",
-      "Write(**/*.key)",
       "Edit(**/secrets/**)",
-      "Write(**/secrets/**)",
-      "Edit(.git/**)",
-      "Write(.git/**)"
+      "Edit(.git/**)"
     ]
   }
 }

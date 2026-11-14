@@ -162,12 +162,16 @@ def _merge_settings(existing: dict, cfg: dict) -> dict:
     elif s.get("model") in ("haiku", "sonnet", "opus"):
         s.pop("model")  # remove o que o AgentKit colocou antes
 
-    deny = s.setdefault("permissions", {}).setdefault("deny", [])
-    for pat in cfg["guardrails"]["protected_paths"]:
-        for tool in ("Edit", "Write"):
-            rule = f"{tool}({pat})"
-            if rule not in deny:
-                deny.append(rule)
+    perms = s.setdefault("permissions", {})
+    protected = cfg["guardrails"]["protected_paths"]
+    # O Claude Code só aplica regras Edit(...) às ferramentas de edição (Edit, Write, MultiEdit...);
+    # Write(...) é ignorado e gera aviso. Remove as Write(...) que versões antigas do AgentKit gravavam.
+    deny = [r for r in perms.get("deny", []) if r not in {f"Write({p})" for p in protected}]
+    for pat in protected:
+        rule = f"Edit({pat})"
+        if rule not in deny:
+            deny.append(rule)
+    perms["deny"] = deny
     return s
 
 
