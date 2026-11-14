@@ -88,7 +88,9 @@ def _python(root: Path, result: dict) -> None:
     elif (root / "requirements.txt").exists():
         cmds["install"] = "pip install -r requirements.txt"
     elif (root / "pyproject.toml").exists():
-        cmds["install"] = "pip install -e ."
+        # com extra "dev" (onde costuma estar o pytest), instala junto para os testes rodarem
+        has_dev = re.search(r"^\s*dev\s*=", text, re.M) and "optional-dependencies" in text
+        cmds["install"] = 'pip install -e ".[dev]"' if has_dev else "pip install -e ."
     if "pytest" in text or (root / "tests").exists():
         cmds["test"] = f"{prefix}pytest"
     if "ruff" in text:

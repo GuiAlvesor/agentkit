@@ -26,6 +26,8 @@ def cmd_init(a):
     if a.dry_run:
         for item in plan(a.path, cfg):
             print(f"  {item['status']:<16} {item['path']}")
+        if getattr(a, "scaffold", False) and not (Path(a.path) / cfg["kickoff"]["dir"]).exists():
+            print(f"  {'novo':<16} {cfg['kickoff']['dir']}/ (modelo de requisitos)")
         return
     rep = install(a.path, cfg, force=a.force)
     print(f"✔ AgentKit instalado em {Path(a.path).resolve()}")

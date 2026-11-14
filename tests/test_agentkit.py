@@ -195,3 +195,10 @@ def test_claude_md_que_cita_o_marcador_nao_e_corrompido(tmp_path):
     novo = (tmp_path / "CLAUDE.md").read_text(encoding="utf-8")
     assert novo.startswith(texto) and "1. algo importante" in novo
     assert "- nova regra" in novo and novo.count("agentkit:end -->") == 1
+
+
+def test_detect_python_com_extra_dev(tmp_path):
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "x"\n\n[project.optional-dependencies]\ndev = ["pytest>=8"]\n', encoding="utf-8")
+    d = detect(tmp_path)
+    assert d["commands"]["install"] == 'pip install -e ".[dev]"' and d["commands"]["test"] == "pytest"
