@@ -48,12 +48,14 @@ Pense no orquestrador como um tech lead: ele ouve o pedido, decide se precisa de
 | Mudança estrutural, módulo novo, mexer em dados/APIs | `architect` → `code-writer` → `code-reviewer` → `guardrail` |
 | Revisar a branch atual ou um PR | `pr-reviewer` |
 | "O que mudou entre v1 e v2?" | `release-summary` |
+| Projeto novo com `requisitos/` preenchido | `/iniciar-projeto`: `requirements-analyst` → (você responde) → `architect` → `requirements-analyst` (backlog) → (você aprova) |
+| Avançar no backlog | `/proxima-tarefa`: `requirements-analyst` marca `[~]` → `code-writer` → `code-reviewer` → `guardrail` → marca `[x]` |
 | Antes de qualquer commit, PR ou deploy | `guardrail` (obrigatório) |
 | Deploy | `deployer` (se habilitado; só com `--allow-deploy` no SDK, só depois de revisão) |
 
 ### Contratos invariantes
 
-- **Agentes revisores não editam.** `architect`, `code-reviewer`, `pr-reviewer` e `guardrail` não têm `Write`/`Edit`. Quem escreve código é o `code-writer`.
+- **Agentes revisores não editam.** `architect`, `code-reviewer`, `pr-reviewer` e `guardrail` não têm `Write`/`Edit`. Quem escreve código é o `code-writer`; o `requirements-analyst` só escreve em `docs/plano/` e nunca na pasta `requisitos/`, que é sua.
 - **Guardrail tem duas camadas.** Além do agente, o hook `.claude/hooks/agentkit_guardrail.py` roda em todo tool call (determinístico, só biblioteca padrão). O hook não pode ser "convencido".
 - **Limite de ciclo.** Se o `code-reviewer` retornar "MUDANÇAS NECESSÁRIAS", o orquestrador volta ao `code-writer` com os achados. Máximo 3 ciclos — depois, pausa e pede ajuda humana.
 - **Commit e push só a pedido.** O orquestrador nunca comita sozinho. Push nunca acontece sem pedido explícito.
@@ -62,12 +64,41 @@ Pense no orquestrador como um tech lead: ele ouve o pedido, decide se precisa de
 
 | Comando | O que aciona |
 |---|---|
+| `/iniciar-projeto` | Requisitos → `PERGUNTAS.md` → `ARQUITETURA.md` → `BACKLOG.md`, parando para suas respostas e sua aprovação |
+| `/proxima-tarefa [T-xxx]` | Uma tarefa do backlog com o fluxo completo; marca o status e para |
 | `/ship <tarefa>` | Fluxo completo: `architect` (se necessário) → `code-writer` → `code-reviewer` → `guardrail` |
 | `/review-pr [número]` | `pr-reviewer` + `guardrail` em paralelo |
 | `/release-notes [v1.2.0..HEAD]` | `release-summary` |
 | `/deploy staging\|production` | `deployer` (se habilitado, depois de revisão aprovada) |
 
 Em todos os casos você também pode descrever o que quer em linguagem natural. O slash command é só um atalho que já traz o contexto esperado.
+
+---
+
+### Ciclo de desenvolvimento a partir dos requisitos
+
+1. **Requisitos (você).** `agentkit init` cria `requisitos/README.md` e `requisitos/00-visao.md`. Preencha objetivo, usuários, escopo, `RF-xx`, `RNF-xx`, restrições e critérios de aceite. Pode acrescentar outros `.md` (telas, regras, integrações).
+2. **`/iniciar-projeto`.** O analista grava `docs/plano/PERGUNTAS.md` com bloqueios, ambiguidades, lacunas e suposições. **O fluxo para** e mostra os bloqueios; responda no chat ou no próprio arquivo e rode de novo. Sem bloqueios, o `architect` propõe a arquitetura (gravada em `ARQUITETURA.md`) e o analista monta o `BACKLOG.md`. **O fluxo para** de novo para você aprovar.
+3. **`/proxima-tarefa`.** Pega a primeira tarefa `[ ]` cujas dependências estão `[x]`, implementa com os critérios de aceite como definição de pronto, revisa, passa pelo guardrail, marca `[x]` (ou `[!]` com o motivo) e **para**. Commit só se você pedir ou se `kickoff.commit_each_task: true`.
+4. **Acompanhar.** `agentkit backlog` lista as tarefas por marco, mostra o progresso e a próxima tarefa. `agentkit doctor` e a interface (aba Projeto) mostram em que etapa o projeto está.
+
+Formato de uma tarefa no backlog (dá para editar à mão):
+```
+- [ ] T-003 · Login  (RF-03) · depende: T-002
+  - Aceite: bloqueia após 5 tentativas; testes de sucesso e erro
+```
+Status: `[ ]` pendente · `[~]` em andamento · `[x]` feita · `[!]` bloqueada.
+
+Requisitos mudaram? Edite `requisitos/` e rode `/iniciar-projeto` de novo: o analista atualiza perguntas e backlog sem desfazer as tarefas `[x]`.
+
+### RAG: como os agentes consultam a documentação
+
+Com `rag.enabled: true`, o Claude Code inicia o servidor `agentkit-rag` (registrado no `.mcp.json`) e os agentes que planejam, escrevem ou revisam ganham a ferramenta `search_docs`. Eles a usam para encontrar requisitos, decisões de arquitetura e trechos da documentação antes de supor algo.
+
+- Sem chave nem pacote extra, a busca é por palavras (BM25). Com `VOYAGE_API_KEY` + `agentkit[rag]`, ou com `agentkit[rag-local]`, ela soma a busca por significado.
+- O índice fica em `.agentkit/rag/` (fora do git) e é incremental. O servidor atualiza o índice ao iniciar; `agentkit rag index` força a atualização.
+- Na primeira vez que o Claude Code encontrar o `.mcp.json`, ele pede para você aprovar o servidor `agentkit-rag`.
+- Para medir a qualidade: crie `requisitos/rag-eval.yaml` com 20–30 perguntas reais (`pergunta:` + `esperado:` com o arquivo) e rode `agentkit rag eval`.
 
 ---
 
@@ -201,6 +232,15 @@ No `agentkit.yaml`, `model: inherit` significa "o agente usa o mesmo modelo da s
 ### Quero mudar a ordem do pipeline
 
 A ordem está no template `agentkit/templates/orchestrator.md` e é renderizada para o `CLAUDE.md` gerado. Mude o template, reinstale, e o novo fluxo vale em todos os projetos. Para mudar só em **um** projeto, edite a seção entre `<!-- agentkit:start -->` e `<!-- agentkit:end -->` do `CLAUDE.md` daquele projeto — ao reinstalar, o AgentKit só regrava essa seção se você não a tiver editado à mão; se editou, a versão nova vai para `CLAUDE.md.agentkit-new`.
+
+### O agente não encontra a ferramenta `search_docs`
+- `agentkit doctor` mostra se o comando do servidor (`rag.mcp_command`, padrão `agentkit`) está no PATH. Se o AgentKit só existe no `.venv` dele, ative esse ambiente antes de abrir o `claude` ou aponte `rag.mcp_command` para o executável completo (ex.: `C:\ferramentas\agentkit\.venv\Scripts\agentkit.exe`).
+- No Claude Code, `/mcp` lista os servidores; confirme que `agentkit-rag` está aprovado e conectado.
+- Depois de ligar o RAG, rode `agentkit install` para regerar `.mcp.json` e os agentes.
+
+### `agentkit rag search` não acha o que eu sei que está lá
+- `agentkit rag status`: o arquivo está nas fontes (`rag.sources`)? Está pendente de indexação?
+- A busca por palavras precisa de termos que aparecem no texto. Com embeddings (Voyage ou local), perguntas com outras palavras também funcionam.
 
 ### A interface gráfica não abre / porta ocupada
 

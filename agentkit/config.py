@@ -25,7 +25,8 @@ def deep_merge(base: dict, override: dict) -> dict:
 
 def normalize(cfg: dict) -> dict:
     """Garante que todas as chaves e todos os agentes existam."""
-    cfg = deep_merge(default_config(), cfg or {})
+    cfg = _migrate(json.loads(json.dumps(cfg or {})))
+    cfg = deep_merge(default_config(), cfg)
     for name, meta in AGENTS.items():
         agent = cfg["agents"].setdefault(name, {})
         agent.setdefault("enabled", True)
@@ -33,6 +34,20 @@ def normalize(cfg: dict) -> dict:
         agent.setdefault("extra_instructions", "")
     # agentes desconhecidos (versões antigas) são descartados
     cfg["agents"] = {k: v for k, v in cfg["agents"].items() if k in AGENTS}
+    return cfg
+
+
+def _migrate(cfg: dict) -> dict:
+    """Atualiza configurações gravadas por versões anteriores do AgentKit."""
+    if cfg.get("version", 1) < 2:
+        rag = cfg.get("rag") or {}
+        # na v1 o RAG não funcionava e "chroma" era só o valor padrão; o novo padrão
+        # é o banco local (sem dependências)
+        if rag.get("provider") == "chroma" and "embedder" not in rag:
+            rag["provider"] = "local"
+        if rag.get("sources") == ["docs/**/*.md", "README.md"]:  # padrão antigo
+            rag["sources"] = ["requisitos/**/*.md", "docs/**/*.md", "README.md"]
+        cfg["version"] = 2
     return cfg
 
 

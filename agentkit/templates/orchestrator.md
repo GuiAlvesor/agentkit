@@ -7,6 +7,19 @@ Agentes disponíveis:
 - `{{ name }}` — {{ meta.summary }}
 {%- endfor %}
 
+{%- if "requirements-analyst" in enabled %}
+
+### Início de projeto (requisitos → backlog → tarefas)
+- Os requisitos do usuário ficam em `{{ k.dir }}/`; o plano gerado pelos agentes fica em `{{ k.plan_dir }}/` (`PERGUNTAS.md`, `ARQUITETURA.md`, `BACKLOG.md`).
+- Se `{{ k.plan_dir }}/BACKLOG.md` não existe e `{{ k.dir }}/` tem conteúdo, sugira `/iniciar-projeto` antes de implementar qualquer coisa.
+- Com o backlog aprovado, o trabalho avança uma tarefa por vez com `/proxima-tarefa`. Pedidos de funcionalidade nova que não estão no backlog: proponha registrá-los no backlog (via `requirements-analyst`) antes de implementar.
+{%- endif %}
+{%- if rag.enabled %}
+
+### Base de conhecimento (RAG)
+Use `search_docs` (servidor MCP `agentkit-rag`) para encontrar requisitos e decisões antes de delegar, e inclua os trechos relevantes na instrução do subagente.
+{%- endif %}
+
 ### Fluxo padrão para mudanças de código
 {%- set n = namespace(i=1) %}
 {%- if "architect" in enabled %}

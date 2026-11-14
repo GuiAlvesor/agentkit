@@ -21,6 +21,12 @@ AGENTS: dict[str, dict] = {
         "default_model": "opus",
         "main_thread": True,
     },
+    "requirements-analyst": {
+        "title": "Analista de requisitos",
+        "summary": "Lê requisitos/, aponta lacunas e mantém o backlog de tarefas em docs/plano/.",
+        "tools": ["Read", "Grep", "Glob", "Write", "Edit"],
+        "default_model": "sonnet",
+    },
     "architect": {
         "title": "Arquiteto",
         "summary": "Planeja mudanças estruturais e avalia impacto arquitetural.",
@@ -66,7 +72,7 @@ AGENTS: dict[str, dict] = {
 }
 
 DEFAULT_CONFIG: dict = {
-    "version": 1,
+    "version": 2,
     "project": {
         "name": "",
         "description": "",
@@ -137,15 +143,30 @@ DEFAULT_CONFIG: dict = {
     },
     "rag": {
         "enabled": False,
-        "provider": "chroma",  # chroma | pgvector | qdrant
+        "provider": "local",  # local (SQLite, sem dependências) | chroma | pgvector | qdrant
+        # auto: Voyage se houver VOYAGE_API_KEY; senão fastembed local, se instalado; senão só BM25
+        "embedder": "auto",  # auto | voyage | local | none
         "embedding_model": "voyage-3",
-        "sources": ["docs/**/*.md", "README.md"],
+        "local_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "rerank": False,  # reranking da Voyage (exige VOYAGE_API_KEY)
+        "sources": ["requisitos/**/*.md", "docs/**/*.md", "README.md"],
         "chunk_size": 1200,
         "chunk_overlap": 150,
         "top_k": 6,
-        "connection": "",
+        "connection": "",  # pgvector/qdrant; use ${VARIAVEL} para não gravar credenciais
+        "mcp_command": "agentkit",  # comando que inicia o servidor MCP (precisa estar no PATH)
+    },
+    "kickoff": {
+        "dir": "requisitos",  # onde o usuário escreve os requisitos iniciais
+        "plan_dir": "docs/plano",  # PERGUNTAS.md, ARQUITETURA.md e BACKLOG.md gerados pelos agentes
+        "commit_each_task": False,  # /proxima-tarefa faz commit ao concluir cada tarefa
     },
 }
+
+
+# Agentes que ganham a ferramenta de busca do RAG quando rag.enabled = true
+RAG_TOOL = "mcp__agentkit-rag__search_docs"
+RAG_AGENTS = ("requirements-analyst", "architect", "code-writer", "code-reviewer", "pr-reviewer")
 
 
 def default_config() -> dict:

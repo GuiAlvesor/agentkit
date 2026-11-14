@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentkit"
-version = "0.1.0"
+version = "0.2.0"
 description = "Kit portátil de agentes (orquestrador, arquiteto, escritor, revisores, guardrail, deployer, release) para Claude Code e Claude Agent SDK"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -18,6 +18,12 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "httpx>=0.27"]
+# RAG: a busca por palavras (BM25) e o banco local não precisam de nada; estes extras são opcionais
+rag = ["voyageai>=0.3"]              # embeddings e reranking Voyage (VOYAGE_API_KEY)
+rag-local = ["fastembed>=0.4"]       # embeddings locais, gratuitos e offline
+chroma = ["chromadb>=0.5"]
+qdrant = ["qdrant-client>=1.10"]
+pgvector = ["psycopg[binary]>=3.1"]
 
 [project.scripts]
 agentkit = "agentkit.cli:main"

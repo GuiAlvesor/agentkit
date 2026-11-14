@@ -9,3 +9,6 @@ dist/
 .claude/agentkit/guardrail.log
 *.agentkit-new
 .claude/settings.local.json
+
+# AgentKit
+.agentkit/

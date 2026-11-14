@@ -11,8 +11,8 @@ import sys
 from pathlib import Path
 
 from . import config as cfgmod
-from .defaults import AGENTS
-from .installer import enabled_agents, parse_agent_markdown, render_agent, render_orchestrator
+from .defaults import AGENTS, RAG_TOOL
+from .installer import MCP_NAME, enabled_agents, mcp_entry, parse_agent_markdown, render_agent, render_orchestrator
 
 
 def _sdk():
@@ -84,6 +84,10 @@ def _options(root: Path, cfg: dict, *, model: str, tools: list[str], append: str
              agents: dict | None = None, permission_mode: str | None = None):
     sdk = _sdk()
     ci = cfg["ci"]
+    extra = {}
+    if cfg["rag"]["enabled"]:
+        # mesmo servidor que o .mcp.json registra para o Claude Code
+        extra["mcp_servers"] = {MCP_NAME: {"type": "stdio", **mcp_entry(cfg)}}
     return sdk.ClaudeAgentOptions(
         cwd=str(root),
         model=None if model == "inherit" else model,
@@ -94,6 +98,7 @@ def _options(root: Path, cfg: dict, *, model: str, tools: list[str], append: str
         permission_mode=permission_mode or ci.get("permission_mode", "acceptEdits"),
         max_turns=ci.get("max_turns", 40),
         max_budget_usd=ci.get("max_budget_usd") or None,
+        **extra,
     )
 
 
@@ -103,6 +108,8 @@ def run_task(project: str | Path, task: str, allow_deploy: bool = False) -> str:
     root, cfg = load_project(project)
     agents = build_agents(root, cfg, allow_deploy)
     tools = ["Agent", "Task", "Read", "Grep", "Glob", "Bash", "TodoWrite"]
+    if cfg["rag"]["enabled"]:
+        tools.append(RAG_TOOL)
     opts = _options(root, cfg, model=cfg["agents"]["orchestrator"]["model"], tools=tools,
                     append=render_orchestrator(cfg), agents=agents)
     return asyncio.run(_stream(task, opts))

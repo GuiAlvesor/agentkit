@@ -1,16 +1,16 @@
-"""Ponto de extensão para RAG (fase 2).
+"""RAG do AgentKit: indexa a documentação do projeto e a expõe aos agentes.
 
-A configuração já existe em `agentkit.yaml > rag`. O plano de implementação:
+Módulos:
+  chunking.py    divide arquivos por estrutura (títulos de Markdown, funções/classes Python)
+  bm25.py        busca por palavras em Python puro (funciona sem chave nem dependência)
+  embedders.py   Voyage (agentkit[rag]) ou fastembed local (agentkit[rag-local]); modo "auto"
+  store.py       bancos vetoriais: local (SQLite, padrão), chroma, qdrant, pgvector
+  index.py       catálogo incremental (hash por arquivo) e busca híbrida (BM25 + vetores, RRF)
+  mcp_server.py  servidor MCP `agentkit-rag` com search_docs/list_sources para os agentes
+  evaluate.py    hit@k e MRR a partir de um arquivo de perguntas
 
-1. `Indexer`  — lê `rag.sources`, divide em chunks (por título/função), gera embeddings
-   (`rag.embedding_model`) e grava no `VectorStore` com metadados (arquivo, seção, hash).
-   Reindexa só arquivos cujo hash mudou.
-2. `VectorStore` — implementações para chroma (local), pgvector e qdrant, todas com a
-   mesma interface abaixo. Busca híbrida (vetorial + BM25) e reranking opcional.
-3. Servidor MCP `agentkit-rag` com a ferramenta `search_docs(query, top_k, filters)`,
-   registrado no `.mcp.json` do projeto pelo instalador quando `rag.enabled` for true.
-   Assim qualquer agente (architect, code-writer, revisores) passa a consultar a base.
-4. Comando `agentkit rag index|search|eval` e um conjunto de perguntas de avaliação.
+Uso: `agentkit rag index|search|status|eval|serve` ou `rag.enabled: true` no agentkit.yaml
+(o instalador registra o servidor no .mcp.json e libera a ferramenta para os agentes).
 """
 from __future__ import annotations
 
@@ -36,8 +36,20 @@ class VectorStore(Protocol):
     def upsert(self, chunks: list[Chunk], embeddings: list[list[float]]) -> None: ...
     def search(self, embedding: list[float], top_k: int, filters: dict | None = None) -> list[Hit]: ...
     def delete_source(self, source: str) -> None: ...
+    def clear(self) -> None: ...
 
 
 class Embedder(Protocol):
+    id: str
     def embed_documents(self, texts: list[str]) -> list[list[float]]: ...
     def embed_query(self, text: str) -> list[float]: ...
+
+
+def index_project(*args, **kwargs):
+    from .index import index_project as _f
+    return _f(*args, **kwargs)
+
+
+def search(*args, **kwargs):
+    from .index import search as _f
+    return _f(*args, **kwargs)

@@ -62,7 +62,7 @@ def test_install_generates_everything(node_project):
 
     agents = sorted(p.stem for p in (node_project / ".claude/agents").glob("*.md"))
     assert agents == ["architect", "code-reviewer", "code-writer", "deployer",
-                      "guardrail", "pr-reviewer", "release-summary"]
+                      "guardrail", "pr-reviewer", "release-summary", "requirements-analyst"]
     meta, body = parse_agent_markdown((node_project / ".claude/agents/code-reviewer.md").read_text(encoding="utf-8"))
     assert meta["name"] == "code-reviewer" and meta["model"] == "claude-sonnet-5-5"
     assert "Write" not in meta["tools"] and "pnpm test" in body

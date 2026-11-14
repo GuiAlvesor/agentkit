@@ -119,6 +119,47 @@ def _project_files(cwd: Path) -> list[Check]:
         else:
             out.append(Check(rel, "fail", "ausente",
                              "Rode `agentkit install` para regerar"))
+    out.extend(_rag_and_kickoff(cwd))
+    return out
+
+
+def _rag_and_kickoff(cwd: Path) -> list[Check]:
+    """Estado do RAG (se habilitado) e da etapa do ciclo de desenvolvimento."""
+    from . import config as cfgmod
+    from .kickoff import state
+
+    try:
+        cfg = cfgmod.load(cwd)
+    except Exception as exc:  # yaml inválido etc.
+        return [Check("agentkit.yaml válido", "fail", str(exc)[:80], "Corrija o arquivo ou recrie com `agentkit init`")]
+    out: list[Check] = []
+    if cfg["rag"]["enabled"]:
+        from .rag.embedders import describe
+        from .rag.index import status
+
+        cmd = cfg["rag"].get("mcp_command") or "agentkit"
+        if shutil.which(cmd):
+            out.append(Check("RAG: servidor MCP", "ok", f"{cmd} rag serve"))
+        else:
+            out.append(Check("RAG: servidor MCP", "warn", f"`{cmd}` não está no PATH",
+                             "O Claude Code inicia o servidor com esse comando: instale o AgentKit no PATH "
+                             "(ex.: pipx install .) ou ajuste rag.mcp_command"))
+        busca = describe(cfg["rag"])
+        out.append(Check("RAG: busca", "warn" if busca.startswith("só palavras (BM25):") else "ok", busca))
+        st = status(cwd, cfg)
+        if st["stale"]:
+            out.append(Check("RAG: índice", "warn",
+                             f"{st['new']} novos, {st['changed']} alterados, {st['removed']} removidos",
+                             "Rode `agentkit rag index` (o servidor MCP também atualiza ao iniciar)"))
+        else:
+            out.append(Check("RAG: índice", "ok", f"{st['indexed']} arquivos, {st['chunks']} trechos"))
+    if cfg["agents"]["requirements-analyst"]["enabled"]:
+        st = state(cwd, cfg)
+        b = st["backlog"]
+        detail = st["stage"] + (f" · {b['feita']}/{b['total']} tarefas feitas" if b else "")
+        hint = {"sem requisitos": "Rode `agentkit requisitos` para criar o modelo",
+                "preencher requisitos": f"Preencha {st['requirements_dir']}/00-visao.md"}.get(st["stage"], "")
+        out.append(Check("ciclo de desenvolvimento", "ok", detail, hint))
     return out
 
 

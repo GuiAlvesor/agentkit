@@ -4,11 +4,12 @@ Arquivos gerados no projeto-alvo:
   agentkit.yaml                         configuração (fonte da verdade, versionável)
   CLAUDE.md                             seção gerenciada entre marcadores; o resto é preservado
   .claude/agents/<agente>.md            um por agente habilitado
-  .claude/commands/{ship,review-pr,release-notes,deploy}.md
+  .claude/commands/{ship,review-pr,release-notes,deploy,iniciar-projeto,proxima-tarefa}.md
   .claude/hooks/agentkit_guardrail.py   hook determinístico
   .claude/agentkit/guardrails.json      política lida pelo hook
   .claude/agentkit/manifest.json        hashes do que o AgentKit gerou
   .claude/settings.json                 mesclado: hook + modelo do orquestrador
+  .mcp.json                             mesclado: servidor agentkit-rag (só com rag.enabled)
   .github/workflows/agentkit-review.yml (opcional)
 
 Se você editou à mão um arquivo gerado, ele NÃO é sobrescrito: a versão nova
@@ -25,13 +26,15 @@ import yaml
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from . import config as cfgmod
-from .defaults import AGENTS
+from .defaults import AGENTS, RAG_AGENTS, RAG_TOOL
 
 PKG = Path(__file__).parent
 MANIFEST = ".claude/agentkit/manifest.json"
 HOOK_REL = ".claude/hooks/agentkit_guardrail.py"
 MARK_START = "<!-- agentkit:start (gerado pelo AgentKit; edite pelo agentkit.yaml) -->"
 MARK_END = "<!-- agentkit:end -->"
+MCP_FILE = ".mcp.json"
+MCP_NAME = "agentkit-rag"
 MARK_RE = re.compile(r"<!-- agentkit:start.*?-->.*?<!-- agentkit:end -->\n?", re.S)
 
 _env = Environment(
@@ -70,7 +73,7 @@ def enabled_agents(cfg: dict) -> dict[str, dict]:
 def _ctx(cfg: dict) -> dict:
     return {
         "p": cfg["project"], "c": cfg["commands"], "g": cfg["guardrails"],
-        "ci": cfg["ci"], "rag": cfg["rag"], "agents": cfg["agents"],
+        "ci": cfg["ci"], "rag": cfg["rag"], "k": cfg["kickoff"], "agents": cfg["agents"],
         "enabled": enabled_agents(cfg),
     }
 
@@ -80,10 +83,18 @@ def _tidy(text: str) -> str:
     return text.strip() + "\n"
 
 
+def agent_tools(name: str, cfg: dict) -> list[str]:
+    """Ferramentas do agente; com o RAG ligado, os agentes que consultam ganham search_docs."""
+    tools = list(AGENTS[name]["tools"])
+    if cfg["rag"]["enabled"] and name in RAG_AGENTS:
+        tools.append(RAG_TOOL)
+    return tools
+
+
 def render_agent(name: str, cfg: dict) -> str:
-    meta, acfg = AGENTS[name], cfg["agents"][name]
+    acfg = cfg["agents"][name]
     tpl = _env.get_template(f"agents/{name}.md")
-    text = _tidy(tpl.render(**_ctx(cfg), a=acfg, tools=", ".join(meta["tools"]), model=acfg["model"]))
+    text = _tidy(tpl.render(**_ctx(cfg), a=acfg, tools=", ".join(agent_tools(name, cfg)), model=acfg["model"]))
     # garante YAML válido no frontmatter (descrições podem conter ":")
     return re.sub(r"^description: (?!\")(.*)$",
                   lambda m: "description: " + json.dumps(m.group(1), ensure_ascii=False),
@@ -112,10 +123,12 @@ def render_files(cfg: dict) -> dict[str, str]:
         files[f".claude/agents/{name}.md"] = render_agent(name, cfg)
 
     ctx = _ctx(cfg)
-    commands = {"ship": "code-writer", "review-pr": "pr-reviewer",
-                "release-notes": "release-summary", "deploy": "deployer"}
+    commands = {"ship": ("code-writer",), "review-pr": ("pr-reviewer",),
+                "release-notes": ("release-summary",), "deploy": ("deployer",),
+                "iniciar-projeto": ("requirements-analyst",),
+                "proxima-tarefa": ("requirements-analyst", "code-writer")}
     for cmd, needs in commands.items():
-        if needs in ctx["enabled"]:
+        if all(n in ctx["enabled"] for n in needs):
             files[f".claude/commands/{cmd}.md"] = _tidy(_env.get_template(f"commands/{cmd}.md").render(**ctx))
 
     files[HOOK_REL] = (PKG / "hooks" / "agentkit_guardrail.py").read_text(encoding="utf-8")
@@ -154,6 +167,54 @@ def _merge_settings(existing: dict, cfg: dict) -> dict:
             if rule not in deny:
                 deny.append(rule)
     return s
+
+
+# ---------------------------------------------------------------- .mcp.json
+def mcp_entry(cfg: dict) -> dict:
+    return {"command": cfg["rag"].get("mcp_command") or "agentkit", "args": ["rag", "serve"]}
+
+
+def _merge_mcp(existing: dict, cfg: dict) -> dict:
+    """Adiciona/remove só o servidor agentkit-rag; preserva os demais servidores."""
+    s = json.loads(json.dumps(existing))
+    servers = s.setdefault("mcpServers", {})
+    if cfg["rag"]["enabled"]:
+        servers[MCP_NAME] = mcp_entry(cfg)
+    else:
+        servers.pop(MCP_NAME, None)
+    return s
+
+
+def _mcp_status(root: Path, cfg: dict) -> str | None:
+    path = root / MCP_FILE
+    if not path.exists():
+        return "novo" if cfg["rag"]["enabled"] else None
+    try:
+        existing = json.loads(read_user_text(path))
+    except json.JSONDecodeError:
+        return "mesclar"
+    return "igual" if _merge_mcp(existing, cfg) == existing else "mesclar"
+
+
+def _write_mcp(root: Path, cfg: dict, report: dict) -> None:
+    path = root / MCP_FILE
+    if not path.exists() and not cfg["rag"]["enabled"]:
+        return
+    try:
+        existing = json.loads(read_user_text(path)) if path.exists() else {}
+    except json.JSONDecodeError:
+        existing = {}
+        path.rename(path.with_suffix(".json.bak"))
+    merged = _merge_mcp(existing, cfg)
+    if merged == existing:
+        report["unchanged"].append(MCP_FILE)
+        return
+    if not merged.get("mcpServers") and set(merged) == {"mcpServers"} and path.exists():
+        path.unlink()  # só tinha o servidor do AgentKit
+        report["removed"].append(MCP_FILE)
+        return
+    path.write_text(json.dumps(merged, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    report["written"].append(MCP_FILE)
 
 
 # ---------------------------------------------------------------- plano/instalação
@@ -197,6 +258,9 @@ def plan(project: str | Path, cfg: dict) -> list[dict]:
         out.append({"path": "CLAUDE.md", "status": "igual" if has and has.group(0) == section
                     else ("atualizar" if has else "adicionar seção")})
     out.append({"path": ".claude/settings.json", "status": "mesclar" if (root / ".claude/settings.json").exists() else "novo"})
+    mcp = _mcp_status(root, cfg)
+    if mcp:
+        out.append({"path": MCP_FILE, "status": mcp})
     out.append({"path": cfgmod.CONFIG_FILE, "status": "atualizar" if (root / cfgmod.CONFIG_FILE).exists() else "novo"})
     return sorted(out, key=lambda i: i["path"])
 
@@ -266,6 +330,7 @@ def install(project: str | Path, cfg: dict, force: bool = False) -> dict:
     settings_path.write_text(json.dumps(_merge_settings(existing, cfg), indent=2, ensure_ascii=False) + "\n",
                              encoding="utf-8")
     report["written"].append(".claude/settings.json")
+    _write_mcp(root, cfg, report)
 
     (root / MANIFEST).parent.mkdir(parents=True, exist_ok=True)
     (root / MANIFEST).write_text(json.dumps(new_manifest, indent=2) + "\n", encoding="utf-8")
@@ -277,7 +342,7 @@ def install(project: str | Path, cfg: dict, force: bool = False) -> dict:
 
 def _ensure_gitignore(root: Path) -> None:
     gi = root / ".gitignore"
-    lines = [".claude/agentkit/guardrail.log", "*.agentkit-new", ".claude/settings.local.json"]
+    lines = [".claude/agentkit/guardrail.log", "*.agentkit-new", ".claude/settings.local.json", ".agentkit/"]
     text = read_user_text(gi) if gi.exists() else ""
     missing = [line for line in lines if line not in text.splitlines()]
     if missing:

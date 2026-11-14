@@ -40,6 +40,13 @@ class ConfigIn(BaseModel):
     force: bool = False
 
 
+class SearchIn(BaseModel):
+    path: str
+    config: dict
+    query: str
+    top_k: int | None = None
+
+
 class PreviewIn(BaseModel):
     path: str
     config: dict
@@ -129,6 +136,54 @@ def do_install(body: ConfigIn):
     except OSError as exc:
         raise HTTPException(500, str(exc)) from exc
     return {"report": report, "config": cfgmod.load(root)}
+
+
+# ---------------------------------------------------------------- RAG
+@app.post("/api/rag/status")
+def rag_status(body: ConfigIn):
+    from .rag.embedders import describe
+    from .rag.index import status
+
+    cfg = cfgmod.normalize(body.config)
+    return {"index": status(_dir(body.path), cfg), "search": describe(cfg["rag"])}
+
+
+@app.post("/api/rag/index")
+def rag_index(body: ConfigIn):
+    from .rag.index import index_project
+
+    try:
+        return {"report": index_project(_dir(body.path), cfgmod.normalize(body.config), full=body.force, log=None)}
+    except SystemExit as exc:  # embedder/provedor indisponível: mensagem já explica o que instalar
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/rag/search")
+def rag_search(body: SearchIn):
+    from .rag.index import search
+
+    try:
+        hits = search(_dir(body.path), cfgmod.normalize(body.config), body.query, body.top_k)
+    except SystemExit as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"hits": [{"source": h.chunk.source, "section": h.chunk.metadata.get("section", ""),
+                      "score": h.score, "text": h.chunk.text} for h in hits]}
+
+
+# ---------------------------------------------------------------- início de projeto
+@app.post("/api/kickoff/state")
+def kickoff_state(body: ConfigIn):
+    from .kickoff import state
+
+    return state(_dir(body.path), cfgmod.normalize(body.config))
+
+
+@app.post("/api/kickoff/scaffold")
+def kickoff_scaffold(body: ConfigIn):
+    from .kickoff import scaffold, state
+
+    root, cfg = _dir(body.path), cfgmod.normalize(body.config)
+    return {"created": scaffold(root, cfg), "state": state(root, cfg)}
 
 
 def serve(host: str = "127.0.0.1", port: int = 8765, open_browser: bool = True, start_path: str | None = None):

@@ -1,4 +1,5 @@
 {
+  ".claude/agents/requirements-analyst.md": "7bf54a9799347b7f257c742e4a27ff979cdd182bf48f7cc364ea187ea902783a",
   ".claude/agents/architect.md": "be9cbd8c21e187b789ac05876b3fab7ac623caf7f5a96be6e3504e9dba76acd5",
   ".claude/agents/code-writer.md": "5e6f3d160811ac495f5db6a8352cf6b749cded748fe7f3bcc8af4da24f4db40f",
   ".claude/agents/code-reviewer.md": "30ce928588026a534655e276f494b8a8204b88686b29ce15796b9909e060fd4f",
@@ -8,6 +9,8 @@
   ".claude/commands/ship.md": "69344ca5fc3a269e37604ef285a6a64c8cfa87fa985d34b47acedc22aa9421fb",
   ".claude/commands/review-pr.md": "765990f0f9afe677dd6d3b64789c1e45b541083e4259b6d83a5a081fa5f0d34d",
   ".claude/commands/release-notes.md": "1bfb4be77a73d2ed5f26b4f39d52051d7e14aef27c55c9b5b02ccc5592bad251",
+  ".claude/commands/iniciar-projeto.md": "ad4b949a3b7b038109e8b239f08cadbfed396718a6a5c5aa9caf52a4aa41d379",
+  ".claude/commands/proxima-tarefa.md": "def6ade34c5eca425f78fbf0c987cc9ec04f4f5c5395791d2ee85f86aa318656",
   ".claude/hooks/agentkit_guardrail.py": "def72080d779098413ae7cf9d5d860ad32cf020274ec5998b4f502fbc7b6b39a",
   ".claude/agentkit/guardrails.json": "c78d690b4189c5508052eac79bfac1e7e894454375898cefdfb842a39d5c9c73"
 }

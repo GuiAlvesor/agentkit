@@ -1,6 +1,6 @@
 # Configuração do AgentKit para este projeto.
 # Edite pela interface (agentkit gui) ou à mão e rode `agentkit install`.
-version: 1
+version: 2
 project:
   name: AgentKit
   description: Kit portátil de agentes (Claude Code + Agent SDK) com interface de configuração.
@@ -34,6 +34,10 @@ agents:
   orchestrator:
     enabled: true
     model: opus
+    extra_instructions: ''
+  requirements-analyst:
+    enabled: true
+    model: sonnet
     extra_instructions: ''
   architect:
     enabled: true
@@ -98,12 +102,21 @@ ci:
   max_budget_usd: 5.0
 rag:
   enabled: false
-  provider: chroma
+  provider: local
+  embedder: auto
   embedding_model: voyage-3
+  local_model: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+  rerank: false
   sources:
+  - requisitos/**/*.md
   - docs/**/*.md
   - README.md
   chunk_size: 1200
   chunk_overlap: 150
   top_k: 6
   connection: ''
+  mcp_command: agentkit
+kickoff:
+  dir: requisitos
+  plan_dir: docs/plano
+  commit_each_task: false

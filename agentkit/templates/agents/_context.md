@@ -26,3 +26,7 @@ Comandos do projeto (use exatamente estes):
 Convenções específicas:
 {{ p.conventions }}
 {%- endif %}
+{%- if rag.enabled %}
+
+Base de conhecimento (RAG): a ferramenta `search_docs` (servidor MCP `agentkit-rag`) busca em requisitos, documentação e plano do projeto ({{ rag.sources | join(", ") }}). Quando ela estiver disponível para você, use-a antes de supor regras de negócio, requisitos ou decisões já tomadas, e cite o arquivo de origem.
+{%- endif %}

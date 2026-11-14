@@ -113,7 +113,7 @@ pre.md{white-space:pre-wrap;font-family:var(--mono);font-size:12.5px;margin:0}
       <button class="tab" data-t="agents">Agentes e modelos</button>
       <button class="tab" data-t="guard">Guardrails</button>
       <button class="tab" data-t="ci">CI / Agent SDK</button>
-      <button class="tab" data-t="rag">RAG <span class="badge">em breve</span></button>
+      <button class="tab" data-t="rag">RAG</button>
     </div>
 
     <section class="pane on" id="p-proj">
@@ -129,6 +129,17 @@ pre.md{white-space:pre-wrap;font-family:var(--mono);font-size:12.5px;margin:0}
         <select data-k="project.commit_convention"><option value="conventional">Conventional Commits</option><option value="free">Livre</option></select>
         <label>Convenções do projeto (vão para o CLAUDE.md e para todos os agentes)</label>
         <textarea data-k="project.conventions" rows="6" placeholder="- Use repository pattern em src/data&#10;- Componentes React em PascalCase&#10;- Toda rota nova precisa de teste de integração"></textarea>
+      </div>
+      <div class="card">
+        <h3>Início de projeto</h3>
+        <p class="hint" style="margin-top:0">Escreva os requisitos na pasta abaixo e rode <code>/iniciar-projeto</code> no Claude Code: os agentes apontam dúvidas, propõem a arquitetura e montam o backlog. Depois, <code>/proxima-tarefa</code> implementa uma tarefa por vez.</p>
+        <div class="grid2">
+          <div><label>Pasta de requisitos</label><input type="text" data-k="kickoff.dir"></div>
+          <div><label>Pasta do plano (gerado pelos agentes)</label><input type="text" data-k="kickoff.plan_dir"></div>
+        </div>
+        <label class="check"><input type="checkbox" data-k="kickoff.commit_each_task"> Fazer commit ao concluir cada tarefa do backlog</label>
+        <p id="kickState" class="hint"></p>
+        <button class="small" id="scaffoldBtn">Criar modelo de requisitos</button>
       </div>
       <p class="hint" id="detected"></p>
     </section>
@@ -181,17 +192,29 @@ pre.md{white-space:pre-wrap;font-family:var(--mono);font-size:12.5px;margin:0}
     <section class="pane" id="p-rag">
       <div class="card">
         <h3>RAG e banco vetorial</h3>
-        <p class="hint">A configuração já fica salva no agentkit.yaml; a indexação e o servidor MCP de busca entram na próxima fase.</p>
-        <label class="check"><input type="checkbox" data-k="rag.enabled"> Habilitar (sem efeito por enquanto)</label>
+        <p class="hint" style="margin-top:0">Indexa requisitos e documentação e dá aos agentes a ferramenta <code>search_docs</code> (servidor MCP <code>agentkit-rag</code>, registrado no <code>.mcp.json</code>). Sem chave nenhuma, a busca funciona por palavras (BM25); com <code>VOYAGE_API_KEY</code> ou o modelo local, passa a buscar também por significado.</p>
+        <label class="check"><input type="checkbox" data-k="rag.enabled"> Habilitar para os agentes</label>
         <div class="grid2">
-          <div><label>Banco vetorial</label><select data-k="rag.provider"><option>chroma</option><option>pgvector</option><option>qdrant</option></select></div>
-          <div><label>Modelo de embedding</label><input type="text" data-k="rag.embedding_model"></div>
+          <div><label>Banco vetorial</label><select data-k="rag.provider"><option value="local">local (SQLite, sem instalar nada)</option><option>chroma</option><option>pgvector</option><option>qdrant</option></select></div>
+          <div><label>Embeddings</label><select data-k="rag.embedder"><option value="auto">auto (Voyage se houver chave; senão local; senão só palavras)</option><option value="voyage">Voyage</option><option value="local">local (fastembed)</option><option value="none">nenhum (só palavras)</option></select></div>
+          <div><label>Modelo Voyage</label><input type="text" data-k="rag.embedding_model"></div>
+          <div><label>Modelo local</label><input type="text" data-k="rag.local_model"></div>
           <div><label>Tamanho do chunk (caracteres)</label><input type="number" data-k="rag.chunk_size" data-num></div>
           <div><label>Sobreposição</label><input type="number" data-k="rag.chunk_overlap" data-num></div>
           <div><label>Resultados por busca (top-k)</label><input type="number" data-k="rag.top_k" data-num></div>
           <div><label>Conexão (pgvector/qdrant)</label><input type="text" data-k="rag.connection" placeholder="use variável de ambiente, ex.: ${DATABASE_URL}"></div>
+          <div><label>Comando do servidor MCP</label><input type="text" data-k="rag.mcp_command"><p class="hint">Precisa estar no PATH (ex.: <code>agentkit</code>).</p></div>
         </div>
+        <label class="check"><input type="checkbox" data-k="rag.rerank"> Reranking (Voyage; exige chave)</label>
         <label>Fontes a indexar (globs, uma por linha)</label><textarea data-k="rag.sources" data-list="\n"></textarea>
+      </div>
+      <div class="card">
+        <h3>Índice</h3>
+        <p id="ragState" class="hint" style="margin-top:0">—</p>
+        <button class="small" id="ragIndexBtn">Indexar agora</button>
+        <label>Testar busca</label>
+        <div style="display:flex;gap:8px"><input type="text" id="ragQuery" placeholder="ex.: como é calculado o frete?"><button class="small" id="ragSearchBtn">Buscar</button></div>
+        <div id="ragHits"></div>
       </div>
     </section>
   </div>
@@ -292,8 +315,40 @@ function render(det, source){
   renderAgents();
   const sig=det?.signals?.length?`Sinais encontrados: ${det.signals.join(", ")}.`:"Nenhum arquivo de build reconhecido; preencha os comandos à mão.";
   $("#detected").textContent=`Configuração carregada de: ${source}. ${sig}${det && !det.is_git?" Atenção: o diretório não é um repositório git.":""}`;
+  refreshKickoff();refreshRag();
   $("#barMsg").textContent=source==="agentkit.yaml"?"Projeto já configurado. Ajuste e reinstale quando quiser.":"Projeto novo: revise os campos e clique em “Salvar e instalar”.";
 }
+async function refreshKickoff(){
+  try{const st=await api("/api/kickoff/state",{path:PATH,config:CFG});const b=st.backlog;
+    $("#kickState").innerHTML=`Etapa: <b>${esc(st.stage)}</b>`+(b?` · ${b.feita}/${b.total} tarefas feitas${b.proxima?` · próxima: ${esc(b.proxima)}`:""}`:"");
+    $("#scaffoldBtn").hidden=st.stage!=="sem requisitos";
+  }catch(e){$("#kickState").textContent=e.message;}
+}
+async function refreshRag(){
+  try{const r=await api("/api/rag/status",{path:PATH,config:CFG});const i=r.index;
+    $("#ragState").textContent=`${i.indexed} arquivo(s), ${i.chunks} trecho(s) indexados · pendentes: ${i.new} novos, ${i.changed} alterados, ${i.removed} removidos · busca: ${r.search}`;
+  }catch(e){$("#ragState").textContent=e.message;}
+}
+$("#scaffoldBtn").onclick=async()=>{
+  try{const r=await api("/api/kickoff/scaffold",{path:PATH,config:CFG});
+    toast(r.created.length?`Criado: ${r.created.join(", ")}`:"A pasta já existe; nada foi alterado.");refreshKickoff();
+  }catch(e){toast(e.message);}
+};
+$("#ragIndexBtn").onclick=async()=>{
+  const b=$("#ragIndexBtn");b.disabled=true;
+  try{const r=(await api("/api/rag/index",{path:PATH,config:CFG})).report;
+    toast(`Índice: ${r.added} novos, ${r.updated} alterados, ${r.removed} removidos (embedder: ${r.embedder})`);refreshRag();
+  }catch(e){toast(e.message,6000);}finally{b.disabled=false;}
+};
+$("#ragSearchBtn").onclick=async()=>{
+  const q=$("#ragQuery").value.trim();if(!q)return;
+  try{const r=await api("/api/rag/search",{path:PATH,config:CFG,query:q});
+    $("#ragHits").innerHTML=r.hits.length?r.hits.map(h=>`<div class="card" style="margin-top:8px"><b>${esc(h.source)}</b> <span class="hint">${esc(h.section)}</span><pre class="md">${esc(h.text.slice(0,600))}</pre></div>`).join("")
+      :'<p class="hint">Nada encontrado. Indexou? Tente outras palavras.</p>';
+  }catch(e){toast(e.message);}
+};
+$("#ragQuery").onkeydown=e=>{if(e.key==="Enter")$("#ragSearchBtn").click();};
+
 function dirty(){$("#barMsg").textContent="Alterações pendentes — clique em “Salvar e instalar”.";}
 
 async function openProject(path){
@@ -327,7 +382,7 @@ $("#installBtn").onclick=async()=>{
     let html=`<p><b>${rep.written.length}</b> arquivo(s) gravado(s), <b>${rep.unchanged.length}</b> sem mudança.</p>`;
     if(rep.conflicts.length) html+=`<p style="color:var(--warn)">Conflitos (versão nova em *.agentkit-new):</p><ul class="plan">${rep.conflicts.map(f=>`<li>${esc(f)}</li>`).join("")}</ul>`;
     if(rep.removed.length) html+=`<p>Removidos (agentes desabilitados):</p><ul class="plan">${rep.removed.map(f=>`<li>${esc(f)}</li>`).join("")}</ul>`;
-    html+=`<p class="hint">Abra o projeto no Claude Code e use <code>/ship &lt;tarefa&gt;</code>, <code>/review-pr</code>, <code>/release-notes</code> ou <code>/deploy</code>. Fora dele: <code>agentkit run "tarefa" -C ${esc(PATH)}</code>.</p>`;
+    html+=`<p class="hint">Abra o projeto no Claude Code e use <code>/iniciar-projeto</code> (a partir dos requisitos), <code>/proxima-tarefa</code>, <code>/ship &lt;tarefa&gt;</code>, <code>/review-pr</code>, <code>/release-notes</code> ou <code>/deploy</code>. Fora dele: <code>agentkit run "tarefa" -C ${esc(PATH)}</code>.</p>`;
     dialog("Instalado ✔",html);$("#barMsg").textContent="Tudo salvo e instalado.";loadRecent();
   }catch(e){toast(e.message,6000);}finally{b.disabled=false;}
 };

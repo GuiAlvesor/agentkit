@@ -29,6 +29,11 @@ def cmd_init(a):
         return
     rep = install(a.path, cfg, force=a.force)
     print(f"✔ AgentKit instalado em {Path(a.path).resolve()}")
+    if getattr(a, "scaffold", False):
+        from .kickoff import scaffold
+        created = scaffold(Path(a.path).resolve(), cfgmod.load(a.path))
+        if created:
+            print(f"  modelo de requisitos criado: {cfg['kickoff']['dir']}/ (preencha e rode /iniciar-projeto)")
     for key, label in (("written", "gravados"), ("unchanged", "sem mudança"),
                        ("conflicts", "conflitos (veja *.agentkit-new)"), ("removed", "removidos")):
         if rep[key]:
@@ -72,6 +77,81 @@ def cmd_release(a):
     release(a.project, a.range, a.output)
 
 
+def _project(path: str) -> tuple[Path, dict]:
+    root = Path(path).expanduser().resolve()
+    cfg = cfgmod.load(root)
+    if cfg is None:
+        raise SystemExit(f"{root} não tem agentkit.yaml. Rode `agentkit init {root}` antes.")
+    return root, cfg
+
+
+def cmd_requisitos(a):
+    from .kickoff import scaffold
+    root, cfg = _project(a.path)
+    created = scaffold(root, cfg)
+    if created:
+        print("✔ Modelo de requisitos criado:")
+        for f in created:
+            print(f"  {f}")
+        print("Preencha e rode /iniciar-projeto no Claude Code.")
+    else:
+        print(f"{cfg['kickoff']['dir']}/ já existe; nada foi alterado.")
+
+
+def cmd_backlog(a):
+    from .kickoff import backlog_path, load_backlog, progress
+    root, cfg = _project(a.path)
+    tasks = load_backlog(root, cfg)
+    if tasks is None:
+        print(f"Sem backlog ({backlog_path(root, cfg).relative_to(root).as_posix()}). Rode /iniciar-projeto no Claude Code.")
+        return
+    icons = {"pendente": "[ ]", "em andamento": "[~]", "feita": "[x]", "bloqueada": "[!]"}
+    milestone = None
+    for t in tasks:
+        if t.milestone != milestone:
+            milestone = t.milestone
+            if milestone:
+                print(f"\n{milestone}")
+        deps = f"  (depende: {', '.join(t.depends)})" if t.depends else ""
+        print(f"  {icons[t.status]} {t.id} · {t.title}{deps}")
+    p = progress(tasks)
+    print(f"\nProgresso: {p['feita']}/{p['total']} feitas · {p['em andamento']} em andamento · {p['bloqueada']} bloqueadas")
+    print(f"Próxima: {p['proxima'] or '— (nenhuma disponível)'}")
+
+
+def cmd_rag(a):
+    from .rag import index as ragidx
+    root, cfg = _project(a.project)
+    if a.rag_cmd == "index":
+        rep = ragidx.index_project(root, cfg, full=a.full)
+        print(f"✔ Índice: {rep['added']} novos, {rep['updated']} alterados, {rep['removed']} removidos, "
+              f"{rep['unchanged']} sem mudança · embedder: {rep['embedder']}")
+    elif a.rag_cmd == "search":
+        print(ragidx.format_hits(ragidx.search(root, cfg, " ".join(a.query), a.k, a.source)))
+    elif a.rag_cmd == "status":
+        from .rag.embedders import describe
+        st = ragidx.status(root, cfg)
+        print(f"RAG {'habilitado' if cfg['rag']['enabled'] else 'desabilitado'} · banco: {cfg['rag']['provider']} · "
+              f"busca: {describe(cfg['rag'])}")
+        print(f"Indexados: {st['indexed']} arquivos / {st['chunks']} trechos · pendentes: "
+              f"{st['new']} novos, {st['changed']} alterados, {st['removed']} removidos")
+        if st["stale"]:
+            print("→ rode `agentkit rag index`")
+    elif a.rag_cmd == "eval":
+        from .rag.evaluate import evaluate, find_eval_file
+        path = Path(a.file).resolve() if a.file else find_eval_file(root)
+        if not path or not path.exists():
+            raise SystemExit("Arquivo de avaliação não encontrado (crie requisitos/rag-eval.yaml; veja agentkit/rag/evaluate.py).")
+        res = evaluate(root, cfg, path, a.k)
+        for item in res["itens"]:
+            mark = f"#{item['posicao']}" if item["posicao"] else "✗"
+            print(f"  {mark:>3}  {item['pergunta']}  → esperado {item['esperado']}")
+        print(f"\nhit@{res['k']}: {res['hit_rate']:.0%} · MRR: {res['mrr']:.2f} · {res['total']} perguntas")
+    elif a.rag_cmd == "serve":
+        from .rag.mcp_server import serve
+        serve(root, cfg)
+
+
 def cmd_doctor(a):
     from .doctor import main as doctor_main
     sys.exit(doctor_main(Path(a.path).resolve()))
@@ -92,7 +172,9 @@ def main(argv=None):
     s.add_argument("--redetect", action="store_true", help="ignora o agentkit.yaml existente e detecta de novo")
     s.add_argument("--force", action="store_true", help="sobrescreve arquivos editados à mão")
     s.add_argument("--dry-run", action="store_true", help="só mostra o que mudaria")
-    s.set_defaults(func=cmd_init)
+    s.add_argument("--sem-requisitos", dest="scaffold", action="store_false",
+                   help="não cria a pasta de requisitos (requisitos/)")
+    s.set_defaults(func=cmd_init, scaffold=True)
 
     s = sub.add_parser("install", help="reaplica o agentkit.yaml do projeto (após editar à mão)")
     s.add_argument("path", nargs="?", default=".")
@@ -135,6 +217,31 @@ def main(argv=None):
     s.add_argument("-C", "--project", default=".")
     s.add_argument("--output", "-o", default=None)
     s.set_defaults(func=cmd_release)
+
+    s = sub.add_parser("requisitos", help="cria a pasta de requisitos com o modelo (início de projeto)")
+    s.add_argument("path", nargs="?", default=".")
+    s.set_defaults(func=cmd_requisitos)
+
+    s = sub.add_parser("backlog", help="mostra o backlog (docs/plano/BACKLOG.md) e o progresso")
+    s.add_argument("path", nargs="?", default=".")
+    s.set_defaults(func=cmd_backlog)
+
+    s = sub.add_parser("rag", help="RAG: indexar, buscar, avaliar e servidor MCP")
+    rs = s.add_subparsers(dest="rag_cmd", required=True)
+    r = rs.add_parser("index", help="indexa as fontes de rag.sources (incremental)")
+    r.add_argument("--full", action="store_true", help="reindexa tudo do zero")
+    r = rs.add_parser("search", help="busca na base")
+    r.add_argument("query", nargs="+")
+    r.add_argument("-k", type=int, default=None, help="quantos trechos (padrão: rag.top_k)")
+    r.add_argument("--source", default=None, help='filtra por arquivo, ex.: "requisitos/*"')
+    rs.add_parser("status", help="estado do índice e do embedder")
+    r = rs.add_parser("eval", help="avalia a recuperação (hit@k e MRR)")
+    r.add_argument("file", nargs="?", default=None)
+    r.add_argument("-k", type=int, default=None)
+    rs.add_parser("serve", help="servidor MCP stdio (usado pelo Claude Code via .mcp.json)")
+    for r in rs.choices.values():
+        r.add_argument("-C", "--project", default=".")
+    s.set_defaults(func=cmd_rag)
 
     s = sub.add_parser("doctor", help="verifica se o ambiente está pronto (Python, git, Claude Code, ANTHROPIC_API_KEY, pacote)")
     s.add_argument("path", nargs="?", default=".", help="projeto a inspecionar (padrão: diretório atual)")
