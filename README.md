@@ -23,8 +23,11 @@ pip install -e .            # ou: pipx install .
 ```
 
 No Windows (PowerShell, com pyenv-win): `.\setup.ps1` usa o Python do `.python-version`, cria o `.venv` e instala tudo; depois `.venv\Scripts\Activate.ps1`.
+No macOS/Linux (bash, com pyenv): `./setup.sh` faz o equivalente; depois `source .venv/bin/activate`.
 
 Requer Python 3.10+. Para rodar os agentes você precisa do Claude Code (uso interativo) e/ou de `ANTHROPIC_API_KEY` (Agent SDK/CI).
+
+> Para usar no dia a dia (quando cada agente é acionado, como ler o pipeline, troubleshooting), veja [`docs/MANUAL.md`](docs/MANUAL.md).
 
 ## Uso
 
