@@ -229,3 +229,8 @@ def test_busca_vetorial_com_erro_cai_para_bm25(docs_project):
     index_project(root, cfg, embedder=emb, log=None)
     hits = Searcher(root, cfg, embedder=emb).search("frete CEP")
     assert hits and hits[0].chunk.metadata["section"] == "Visão > Entregas"
+
+
+def test_negacao_conta_na_busca():
+    bm = BM25(["Requisitos funcionais: cadastro e login", "Requisitos não funcionais: desempenho e LGPD"])
+    assert bm.top("requisitos não funcionais", 1)[0][0] == 1

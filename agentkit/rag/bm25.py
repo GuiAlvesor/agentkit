@@ -12,9 +12,10 @@ from collections import Counter
 
 _TOKEN = re.compile(r"[a-z0-9_]+")
 # palavras muito comuns que só atrapalham o ranqueamento
+# ("não", "sem" e "sim" ficam de fora: mudam o sentido de um requisito)
 STOPWORDS = frozenset("""
 a o as os um uma uns umas de do da dos das em no na nos nas por pelo pela pelos pelas para pra
-com sem sob sobre e ou que se nao sim ao aos à às é ser foi sao esta este isto essa esse isso
+com sob sobre e ou que se ao aos à às é ser foi sao esta este isto essa esse isso
 como mais menos muito muita mas ja quando onde qual quais seu sua seus suas meu minha the of
 and or to in on for is are be with this that it as at by an
 """.split())
