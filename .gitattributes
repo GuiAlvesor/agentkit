@@ -1,0 +1,4 @@
+# Scripts de shell sempre com LF (com CRLF o bash falha no macOS/Linux e às vezes no Git Bash)
+*.sh text eol=lf
+# O hook roda via "python arquivo.py" em qualquer sistema; LF evita diffs inúteis
+*.py text eol=lf

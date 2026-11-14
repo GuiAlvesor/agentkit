@@ -1,9 +1,3 @@
-## Próximos passos (roadmap)
-1. *Contextual retrieval* no RAG (prefixar cada chunk com uma frase de contexto gerada pelo Claude; opcional por custo).
-2. Ingestão de PDF/DOCX em `requisitos/` (hoje só `.md`/`.txt`).
-3. Histórico de execuções na interface.
-4. Publicar o AgentKit (PyPI ou `pipx install git+https://github.com/GuiAlvesor/agentkit`) para o `agentkit` ficar no PATH, que é o que o `.mcp.json` usa.
-
 # AgentKit — contexto para o Claude Code
 
 Este repositório é o **AgentKit**: um kit portátil de agentes (Claude Code + Claude Agent SDK) que se instala em qualquer projeto com pequenas adaptações. Ele nasceu de uma conversa no Claude; o histórico completo, com as decisões e as explicações, está em `docs/HISTORICO_DO_CHAT.md`. Leia esse arquivo quando precisar entender **por que** algo foi feito de certo jeito.
@@ -27,7 +21,65 @@ O usuário escreve em português do Brasil, usa **Windows**, e quer respostas e 
 | Orquestrador | Roda na **sessão principal** (fluxo no `CLAUDE.md` gerado, modelo no `.claude/settings.json`); no SDK, vira o `system_prompt` de `agentkit run` | Subagentes do Claude Code não chamam outros subagentes |
 | Guardrail | Duas camadas: **agente** (julgamento) + **hook PreToolUse determinístico** (`agentkit/hooks/agentkit_guardrail.py`, só biblioteca padrão) | O hook não pode ser "convencido" pelo modelo e vale também no SDK |
 | Fonte da verdade | `agentkit.yaml` em cada projeto-alvo | Versionável, editável à mão ou pela interface |
-| Edições manuais | Preservadas: manifest com hashes; conflito vai para `*.agentkit-new`; no `CLAUDE.md` só a seção entre `<!-- agentkit:start (gerado pelo AgentKit; edite pelo agentkit.yaml) -->
+| Edições manuais | Preservadas: manifest com hashes; conflito vai para `*.agentkit-new`; no `CLAUDE.md` só a seção entre `<!-- agentkit:start/end -->` é gerenciada | O kit não pode destruir ajustes do usuário |
+| Menor privilégio | Revisores, arquiteto e guardrail sem `Write`/`Edit`; deployer só `Read, Bash`; deployer só roda no SDK com `--allow-deploy` | Segurança |
+| Modelos padrão | orquestrador/architect `opus`; writer/reviewers/deployer/requirements-analyst `sonnet`; guardrail/release-summary `haiku`; aceita ID completo ou `inherit` | Custo × complexidade da tarefa |
+| RAG | Funciona **sem configuração**: BM25 em Python puro + banco `local` (SQLite). Embeddings `auto` (Voyage com `VOYAGE_API_KEY`, senão fastembed se instalado, senão nenhum); chroma/qdrant/pgvector opcionais. Catálogo de textos sempre no SQLite local; só os vetores vão ao provedor | Escolha do usuário ("automático"); zero dependência obrigatória, roda offline no Windows |
+| Acesso ao RAG | Servidor MCP `agentkit-rag` (stdio) no `.mcp.json`, iniciado pelo comando `agentkit` (global, via pipx); `mcp__agentkit-rag__search_docs` entra no `tools:` de analista, architect, writer e revisores (guardrail/deployer/release não) | Subagentes com `tools:` explícito não enxergam ferramentas MCP sem isso |
+| Ciclo de requisitos | Pasta `requisitos/` (do usuário, criada uma vez, nunca sobrescrita) → `docs/plano/{PERGUNTAS,ARQUITETURA,BACKLOG}.md` (escritos só pelo `requirements-analyst`); **uma tarefa por vez** com `/proxima-tarefa`, commit só se `kickoff.commit_each_task` | Escolhas do usuário; orquestrador do SDK continua sem Write/Edit |
+| GitHub | https://github.com/GuiAlvesor/agentkit (público); commits com o e-mail anônimo `…@users.noreply.github.com` (já configurado neste repo) | Privacidade: o histórico foi reescrito para tirar o e-mail pessoal |
+
+## Mapa do código
+```
+agentkit/
+  defaults.py      catálogo dos agentes (ferramentas, modelo padrão) e DEFAULT_CONFIG
+  config.py        load/save/normalize do agentkit.yaml; lista de projetos recentes (~/.agentkit/recent.json)
+  detect.py        detecção de stack: Node (npm/pnpm/yarn/bun), Python (uv/poetry/pip), Go, Rust, Maven, Gradle, .NET, Makefile, Vercel/Fly
+  installer.py     renderiza templates Jinja2 e instala (plan/install, manifest, mescla do settings.json, .gitignore)
+  runner.py        Agent SDK: run_task (orquestrador), run_agent, review (pr-reviewer + guardrail em paralelo), release
+  cli.py           comandos: init, install, detect, gui, run, agent, review, release, doctor, requisitos, backlog, rag
+  doctor.py        checagens do ambiente (usado por `agentkit doctor` e pelos setup.ps1/setup.sh)
+  server.py        API FastAPI da interface (só aceita Host localhost)
+  static/index.html  interface (HTML/CSS/JS puro, tema claro/escuro)
+  hooks/agentkit_guardrail.py   hook copiado para cada projeto
+  templates/       agents/*.md (+ _context.md incluído em todos), orchestrator.md, CLAUDE.section.md, commands/*.md,
+                   ci/agentkit-review.yml, requisitos/*.md (modelo copiado como está, sem Jinja)
+  kickoff.py       modelo de requisitos/ (scaffold), leitura do BACKLOG.md, próxima tarefa, etapa do ciclo
+  rag/             chunking (títulos/funções), bm25, embedders (voyage/local/auto), store (local/chroma/qdrant/pgvector),
+                   index (catálogo incremental + busca híbrida RRF), mcp_server (search_docs), evaluate (hit@k, MRR)
+tests/             pytest: detecção, instalação, preservação de edições, hook, API, runner, RAG (embedder falso), kickoff
+```
+
+## Comandos de desenvolvimento (Windows / PowerShell)
+O Python do projeto é gerenciado pelo **pyenv-win** (versão fixada em `.python-version`); o `.venv` é criado com esse Python.
+```powershell
+pyenv versions                   # versões instaladas; a do projeto vem do .python-version
+.\setup.ps1                      # usa o Python do pyenv, cria .venv e instala com dependências de dev
+.venv\Scripts\Activate.ps1
+pytest -q                        # 43 testes devem passar
+agentkit doctor                  # checa Python, git, Claude Code, chave de API e o projeto
+agentkit rag index; agentkit rag search "pergunta"   # RAG (só BM25 sem chave)
+agentkit gui                     # interface em http://localhost:8765
+agentkit init C:\caminho\projeto --dry-run
+```
+
+## Convenções
+- Código, comentários, mensagens de erro e textos da interface em português.
+- Ler e gravar arquivos sempre com `encoding="utf-8"` (no Windows o padrão é cp1252).
+- Caminhos com `pathlib`; comparar caminhos relativos com `.as_posix()`.
+- O hook de guardrail só pode usar a biblioteca padrão (roda em qualquer projeto).
+- `setup.sh` com LF (garantido pelo `.gitattributes`).
+- `setup.ps1` deve ficar em UTF-8 **com BOM** (o PowerShell 5.1 lê sem BOM como cp1252); há teste para isso.
+- Ao mudar um template, rode os testes: eles verificam que o frontmatter é YAML válido e que nenhuma tag Jinja vaza para o arquivo gerado.
+- Mudanças nos padrões de todos os projetos: `defaults.py` e `templates/`.
+
+## Próximos passos (roadmap)
+1. *Contextual retrieval* no RAG (prefixar cada chunk com uma frase de contexto gerada pelo Claude; opcional por custo).
+2. Ingestão de PDF/DOCX em `requisitos/` (hoje só `.md`/`.txt`).
+3. Histórico de execuções na interface.
+4. Publicar no PyPI (hoje o comando global vem de `pipx install --editable .`, oferecido pelo setup).
+
+<!-- agentkit:start (gerado pelo AgentKit; edite pelo agentkit.yaml) -->
 # AgentKit
 
 Kit portátil de agentes (Claude Code + Agent SDK) com interface de configuração.

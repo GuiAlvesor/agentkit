@@ -13,7 +13,7 @@ Set-Location $PSScriptRoot
 
 # ─── UI helpers ────────────────────────────────────────────────
 $script:step = 0
-$script:total = 6
+$script:total = 7
 function Header($text) {
     Write-Host ""
     Write-Host "┌─ AgentKit · instalação guiada " -NoNewline -ForegroundColor Cyan
@@ -139,6 +139,32 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 Ok "testes passaram"
+
+# ─── 7. Comando agentkit global (para o RAG no Claude Code) ──
+Step "Comando agentkit no PATH (necessário para o RAG no Claude Code)"
+# O Claude Code inicia o servidor de busca (.mcp.json) com o comando "agentkit";
+# o do .venv não fica visível fora dele, então instalamos uma cópia global com pipx.
+$global = Get-Command agentkit -ErrorAction SilentlyContinue
+if (-not $global -and (Test-Path "$HOME\.local\bin\agentkit.exe")) { $global = "$HOME\.local\bin\agentkit.exe" }
+if ($global) {
+    Ok "já instalado ($(if ($global.Source) { $global.Source } else { $global }))"
+} elseif ($Yes) {
+    Warn "pulado no modo -Yes (CI não precisa)."
+    Hint "Para instalar depois: $py -m pip install --user pipx; $py -m pipx install --editable . --python $py"
+} elseif (Ask "Instalar o comando agentkit global com pipx? (editável: acompanha este código)" "s") {
+    & $py -m pip install --user --quiet pipx 2>&1 | Out-Null
+    & $py -m pipx install --editable . --python $py 2>&1 | ForEach-Object { Write-Host "       $_" -ForegroundColor DarkGray }
+    if ($LASTEXITCODE -ne 0) {
+        Fail "pipx install falhou (saída acima). O kit funciona; só o RAG no Claude Code depende disso."
+    } else {
+        & $py -m pipx ensurepath 2>&1 | Out-Null
+        Ok "agentkit instalado em $HOME\.local\bin"
+        Hint "Abra um terminal novo (e reabra o Claude Code) para o PATH valer."
+    }
+} else {
+    Warn "pulado. Sem ele, o RAG funciona pela linha de comando, mas não dentro do Claude Code."
+}
+
 Write-Host ""
 & .\.venv\Scripts\python.exe -m agentkit doctor
 
@@ -148,6 +174,8 @@ Write-Host "┌─ Pronto! Próximos passos ────────────
 Write-Host "│  • Ativar o ambiente:       .venv\Scripts\Activate.ps1" -ForegroundColor Green
 Write-Host "│  • Usar neste repositório:  claude" -ForegroundColor Green
 Write-Host "│  • Instalar em outro projeto: agentkit init C:\caminho\projeto" -ForegroundColor Green
+Write-Host "│    → preencha requisitos\00-visao.md e rode /iniciar-projeto no Claude Code" -ForegroundColor Green
+Write-Host "│  • Busca na documentação:   agentkit rag index; agentkit rag search `"pergunta`"" -ForegroundColor Green
 Write-Host "│  • Interface gráfica:       agentkit gui" -ForegroundColor Green
 Write-Host "│  • Doctor a qualquer hora:  agentkit doctor" -ForegroundColor Green
 Write-Host "└────────────────────────────────────────────────────────────" -ForegroundColor Green

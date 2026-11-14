@@ -181,3 +181,17 @@ def test_setup_ps1_tem_bom_utf8():
     from pathlib import Path
     raiz = Path(__file__).resolve().parent.parent
     assert (raiz / "setup.ps1").read_bytes().startswith(b"\xef\xbb\xbf")
+
+
+def test_claude_md_que_cita_o_marcador_nao_e_corrompido(tmp_path):
+    # um CLAUDE.md que menciona "<!-- agentkit:start/end -->" no meio do texto (como o do próprio AgentKit)
+    from agentkit.installer import render_claude_section
+    cfg = cfgmod.normalize({"project": {"name": "p"}})
+    texto = ("# Meu projeto\n\n| Edições | só a seção entre `<!-- agentkit:start/end -->` é gerenciada |\n\n"
+             "## Roadmap\n1. algo importante\n\n")
+    (tmp_path / "CLAUDE.md").write_text(texto + render_claude_section(cfg), encoding="utf-8")
+    cfg["project"]["conventions"] = "- nova regra"
+    install(tmp_path, cfg)
+    novo = (tmp_path / "CLAUDE.md").read_text(encoding="utf-8")
+    assert novo.startswith(texto) and "1. algo importante" in novo
+    assert "- nova regra" in novo and novo.count("agentkit:end -->") == 1

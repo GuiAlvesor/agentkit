@@ -21,7 +21,7 @@ else
     CYAN=''; GREEN=''; YELLOW=''; RED=''; DIM=''; RST=''
 fi
 step=0
-total=6
+total=7
 header() {
     printf '\n%s┌─ AgentKit · instalação guiada ──────────────────────────────%s\n' "$CYAN" "$RST"
     printf '%s│ %s%s\n' "$CYAN" "$1" "$RST"
@@ -138,6 +138,33 @@ if ! out="$(./.venv/bin/python -m pytest -q 2>&1)"; then
 fi
 echo "$out" | grep -E 'passed|failed|error' | sed 's/^/       /' || true
 ok "testes passaram"
+
+# ─── 7. Comando agentkit global (para o RAG no Claude Code) ──
+step "Comando agentkit no PATH (necessário para o RAG no Claude Code)"
+# O Claude Code inicia o servidor de busca (.mcp.json) com o comando "agentkit";
+# o do .venv não fica visível fora dele, então instalamos uma cópia global com pipx.
+if command -v agentkit >/dev/null 2>&1 || [ -x "$HOME/.local/bin/agentkit" ]; then
+    ok "já instalado ($(command -v agentkit || echo "$HOME/.local/bin/agentkit"))"
+elif [ "$YES" -eq 1 ]; then
+    warn "pulado no modo -y (CI não precisa)."
+    hint "Para instalar depois: $py -m pip install --user pipx && $py -m pipx install --editable . --python $py"
+elif ask "Instalar o comando agentkit global com pipx? (editável: acompanha este código)" "s"; then
+    if command -v pipx >/dev/null 2>&1; then pipx_cmd=(pipx); else
+        "$py" -m pip install --user --quiet pipx >/dev/null 2>&1 || true
+        pipx_cmd=("$py" -m pipx)
+    fi
+    if "${pipx_cmd[@]}" install --editable . --python "$py"; then
+        "${pipx_cmd[@]}" ensurepath >/dev/null 2>&1 || true
+        ok "agentkit instalado em ~/.local/bin"
+        hint "Abra um terminal novo (e reabra o Claude Code) para o PATH valer."
+    else
+        fail "pipx install falhou (saída acima). O kit funciona; só o RAG no Claude Code depende disso."
+        hint "Em distros com Python gerenciado pelo sistema: sudo apt install pipx (ou brew install pipx)."
+    fi
+else
+    warn "pulado. Sem ele, o RAG funciona pela linha de comando, mas não dentro do Claude Code."
+fi
+
 echo
 ./.venv/bin/python -m agentkit doctor
 
@@ -147,6 +174,8 @@ printf '%s┌─ Pronto! Próximos passos ────────────�
 printf '%s│  • Ativar o ambiente:       source .venv/bin/activate%s\n' "$GREEN" "$RST"
 printf '%s│  • Usar neste repositório:  claude%s\n' "$GREEN" "$RST"
 printf '%s│  • Instalar em outro projeto: agentkit init /caminho/projeto%s\n' "$GREEN" "$RST"
+printf '%s│    → preencha requisitos/00-visao.md e rode /iniciar-projeto no Claude Code%s\n' "$GREEN" "$RST"
+printf '%s│  • Busca na documentação:   agentkit rag index; agentkit rag search "pergunta"%s\n' "$GREEN" "$RST"
 printf '%s│  • Interface gráfica:       agentkit gui%s\n' "$GREEN" "$RST"
 printf '%s│  • Doctor a qualquer hora:  agentkit doctor%s\n' "$GREEN" "$RST"
 printf '%s└────────────────────────────────────────────────────────────%s\n' "$GREEN" "$RST"

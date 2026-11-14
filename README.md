@@ -27,12 +27,12 @@ O guardrail tem duas camadas: o **agente** (julgamento: escopo, dependências su
 ### Um comando
 
 ```bash
-git clone <url-do-repo> && cd agentkit
+git clone https://github.com/GuiAlvesor/agentkit.git && cd agentkit
 .\setup.ps1          # Windows (PowerShell)
 ./setup.sh           # macOS / Linux   (ou: bash setup.sh)
 ```
 
-O `setup` é um **wizard guiado**: verifica cada pré-requisito, cria o `.venv`, instala, roda os testes e o `agentkit doctor`. Em caso de ausência de algo opcional (Claude Code, API key) ele avisa e pergunta se prossegue. Para modo não-interativo (CI): `-y` / `-Yes`.
+O `setup` é um **wizard guiado**: verifica cada pré-requisito, cria o `.venv`, instala, roda os testes, oferece instalar o comando `agentkit` global (via `pipx`, necessário para o RAG dentro do Claude Code) e roda o `agentkit doctor`. Em caso de ausência de algo opcional (Claude Code, API key) ele avisa e pergunta se prossegue. Para modo não-interativo (CI): `-y` / `-Yes`.
 
 A qualquer momento, `agentkit doctor` repete as checagens sem reinstalar nada.
 

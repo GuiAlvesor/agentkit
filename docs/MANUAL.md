@@ -10,11 +10,11 @@ Este manual complementa o `README.md`. O README responde "o que é e como instal
 
 ### Instalar o kit
 ```bash
-git clone <url-do-repo> && cd agentkit
+git clone https://github.com/GuiAlvesor/agentkit.git && cd agentkit
 .\setup.ps1          # Windows
 ./setup.sh           # macOS / Linux
 ```
-O wizard verifica pré-requisitos, cria `.venv`, instala e roda os testes. `-y` para modo silencioso (CI).
+O wizard verifica pré-requisitos, cria `.venv`, instala, roda os testes e oferece instalar o comando `agentkit` global com `pipx` (o Claude Code usa esse comando para iniciar o servidor do RAG). `-y` para modo silencioso (CI; pula o passo do `pipx`).
 
 ### Dois cenários de uso após instalar
 

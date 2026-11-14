@@ -35,7 +35,9 @@ MARK_START = "<!-- agentkit:start (gerado pelo AgentKit; edite pelo agentkit.yam
 MARK_END = "<!-- agentkit:end -->"
 MCP_FILE = ".mcp.json"
 MCP_NAME = "agentkit-rag"
-MARK_RE = re.compile(r"<!-- agentkit:start.*?-->.*?<!-- agentkit:end -->\n?", re.S)
+# Os marcadores só valem sozinhos numa linha: um CLAUDE.md que *cita* "<!-- agentkit:start/end -->"
+# no meio do texto não pode ter esse trecho tratado como seção gerenciada (e apagado).
+MARK_RE = re.compile(r"^<!-- agentkit:start[^\n]*-->[ \t]*\n.*?^<!-- agentkit:end -->[ \t]*(?:\n|$)", re.S | re.M)
 
 _env = Environment(
     loader=FileSystemLoader(PKG / "templates"),
