@@ -129,7 +129,7 @@ DEFAULT_CONFIG: dict = {
     "ci": {
         "github_actions": False,
         # como o CI instala o AgentKit (ajuste para o seu repositório ou índice privado)
-        "install_spec": "agentkit @ git+https://github.com/SEU-USUARIO/agentkit.git",
+        "install_spec": "agentkit @ git+https://github.com/GuiAlvesor/agentkit.git",
         "post_review_comment": True,
         "permission_mode": "acceptEdits",
         "max_turns": 40,

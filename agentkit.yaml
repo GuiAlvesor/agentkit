@@ -91,7 +91,7 @@ guardrails:
   max_files_per_change: 30
 ci:
   github_actions: false
-  install_spec: agentkit @ git+https://github.com/SEU-USUARIO/agentkit.git
+  install_spec: agentkit @ git+https://github.com/GuiAlvesor/agentkit.git
   post_review_comment: true
   permission_mode: acceptEdits
   max_turns: 40
