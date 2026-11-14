@@ -72,6 +72,11 @@ def cmd_release(a):
     release(a.project, a.range, a.output)
 
 
+def cmd_doctor(a):
+    from .doctor import main as doctor_main
+    sys.exit(doctor_main(Path(a.path).resolve()))
+
+
 def main(argv=None):
     for stream in (sys.stdout, sys.stderr):  # console do Windows (cp1252) e emojis
         try:
@@ -130,6 +135,10 @@ def main(argv=None):
     s.add_argument("-C", "--project", default=".")
     s.add_argument("--output", "-o", default=None)
     s.set_defaults(func=cmd_release)
+
+    s = sub.add_parser("doctor", help="verifica se o ambiente está pronto (Python, git, Claude Code, ANTHROPIC_API_KEY, pacote)")
+    s.add_argument("path", nargs="?", default=".", help="projeto a inspecionar (padrão: diretório atual)")
+    s.set_defaults(func=cmd_doctor)
 
     a = p.parse_args(argv)
     a.func(a)

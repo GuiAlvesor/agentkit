@@ -17,15 +17,23 @@ O guardrail tem duas camadas: o **agente** (julgamento: escopo, dependências su
 
 ## Instalação
 
+### Pré-requisitos
+- **Python ≥ 3.10** (recomendado 3.12; a versão fixada do projeto está em `.python-version`).
+- **git**.
+- **Claude Code CLI** (`npm install -g @anthropic-ai/claude-code`) para uso interativo **ou** `ANTHROPIC_API_KEY` para uso via Agent SDK/CI.
+- *(Opcional, recomendado)* **pyenv-win** (Windows) ou **pyenv** (macOS/Linux) para gerenciar a versão do Python.
+
+### Um comando
+
 ```bash
-git clone <seu-repo>/agentkit && cd agentkit
-pip install -e .            # ou: pipx install .
+git clone <url-do-repo> && cd agentkit
+.\setup.ps1          # Windows (PowerShell)
+./setup.sh           # macOS / Linux   (ou: bash setup.sh)
 ```
 
-No Windows (PowerShell, com pyenv-win): `.\setup.ps1` usa o Python do `.python-version`, cria o `.venv` e instala tudo; depois `.venv\Scripts\Activate.ps1`.
-No macOS/Linux (bash, com pyenv): `./setup.sh` faz o equivalente; depois `source .venv/bin/activate`.
+O `setup` é um **wizard guiado**: verifica cada pré-requisito, cria o `.venv`, instala, roda os testes e o `agentkit doctor`. Em caso de ausência de algo opcional (Claude Code, API key) ele avisa e pergunta se prossegue. Para modo não-interativo (CI): `-y` / `-Yes`.
 
-Requer Python 3.10+. Para rodar os agentes você precisa do Claude Code (uso interativo) e/ou de `ANTHROPIC_API_KEY` (Agent SDK/CI).
+A qualquer momento, `agentkit doctor` repete as checagens sem reinstalar nada.
 
 > Para usar no dia a dia (quando cada agente é acionado, como ler o pipeline, troubleshooting), veja [`docs/MANUAL.md`](docs/MANUAL.md).
 

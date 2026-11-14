@@ -6,6 +6,31 @@ Este manual complementa o `README.md`. O README responde "o que é e como instal
 
 ---
 
+## 0. Primeiros passos
+
+### Instalar o kit
+```bash
+git clone <url-do-repo> && cd agentkit
+.\setup.ps1          # Windows
+./setup.sh           # macOS / Linux
+```
+O wizard verifica pré-requisitos, cria `.venv`, instala e roda os testes. `-y` para modo silencioso (CI).
+
+### Dois cenários de uso após instalar
+
+| Cenário | Comando | O que acontece |
+|---|---|---|
+| **Usar o AgentKit neste próprio repositório** (desenvolvendo o kit) | abra `claude` aqui | Os arquivos `.claude/agents/*`, `.claude/settings.json` e `agentkit.yaml` já estão versionados — o kit se auto-aplica ao próprio código |
+| **Usar o AgentKit em outro projeto** | `agentkit init /caminho/do/projeto` (ou `agentkit gui /caminho/do/projeto`) | Detecta a stack, gera `CLAUDE.md`, `.claude/agents/*`, hook, `settings.json` e `agentkit.yaml` naquele projeto |
+
+### Diagnóstico a qualquer hora
+```bash
+agentkit doctor          # checa Python, git, Claude Code, API key, arquivos do projeto
+```
+Saída colorida. Exit code 0 = ok ou só avisos; 1 = há bloqueio.
+
+---
+
 ## 1. Como o pipeline decide
 
 O AgentKit **não** tem um pipeline fixo que dispara a cada prompt. Quem decide é o **orquestrador**, que é o próprio Claude Code rodando na sessão principal, lendo as regras do `CLAUDE.md` gerado no projeto.

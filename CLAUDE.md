@@ -32,7 +32,8 @@ agentkit/
   detect.py        detecção de stack: Node (npm/pnpm/yarn/bun), Python (uv/poetry/pip), Go, Rust, Maven, Gradle, .NET, Makefile, Vercel/Fly
   installer.py     renderiza templates Jinja2 e instala (plan/install, manifest, mescla do settings.json, .gitignore)
   runner.py        Agent SDK: run_task (orquestrador), run_agent, review (pr-reviewer + guardrail em paralelo), release
-  cli.py           comandos: init, install, detect, gui, run, agent, review, release
+  cli.py           comandos: init, install, detect, gui, run, agent, review, release, doctor
+  doctor.py        checagens do ambiente (usado por `agentkit doctor` e pelos setup.ps1/setup.sh)
   server.py        API FastAPI da interface (só aceita Host localhost)
   static/index.html  interface (HTML/CSS/JS puro, tema claro/escuro)
   hooks/agentkit_guardrail.py   hook copiado para cada projeto
@@ -47,7 +48,8 @@ O Python do projeto é gerenciado pelo **pyenv-win** (versão fixada em `.python
 pyenv versions                   # versões instaladas; a do projeto vem do .python-version
 .\setup.ps1                      # usa o Python do pyenv, cria .venv e instala com dependências de dev
 .venv\Scripts\Activate.ps1
-pytest -q                        # 16 testes devem passar
+pytest -q                        # 19 testes devem passar
+agentkit doctor                  # checa Python, git, Claude Code, chave de API e o projeto
 agentkit gui                     # interface em http://localhost:8765
 agentkit init C:\caminho\projeto --dry-run
 ```
@@ -57,6 +59,7 @@ agentkit init C:\caminho\projeto --dry-run
 - Ler e gravar arquivos sempre com `encoding="utf-8"` (no Windows o padrão é cp1252).
 - Caminhos com `pathlib`; comparar caminhos relativos com `.as_posix()`.
 - O hook de guardrail só pode usar a biblioteca padrão (roda em qualquer projeto).
+- `setup.ps1` deve ficar em UTF-8 **com BOM** (o PowerShell 5.1 lê sem BOM como cp1252); há teste para isso.
 - Ao mudar um template, rode os testes: eles verificam que o frontmatter é YAML válido e que nenhuma tag Jinja vaza para o arquivo gerado.
 - Mudanças nos padrões de todos os projetos: `defaults.py` e `templates/`.
 
@@ -69,7 +72,7 @@ agentkit init C:\caminho\projeto --dry-run
    - `agentkit rag index|search|eval` + conjunto de perguntas para avaliar a recuperação.
    - A configuração `rag:` e a aba RAG da interface já existem.
 2. Ajustar `ci.install_spec` para o repositório real do usuário no GitHub.
-3. Ideias em aberto: `agentkit doctor` (checa Claude Code, Python, git, chave de API); histórico de execuções na interface.
+3. Ideias em aberto: histórico de execuções na interface. (`agentkit doctor` e o setup guiado já existem.)
 
 Use `/rag-fase2` para começar a fase 2 com o fluxo de agentes.
 

@@ -3,6 +3,7 @@ __pycache__/
 .pytest_cache/
 build/
 dist/
+.venv/
 
 # AgentKit
 .claude/agentkit/guardrail.log

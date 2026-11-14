@@ -158,3 +158,26 @@ def test_runner_builds_agent_definitions(node_project):
     assert "deployer" not in agents  # só com --allow-deploy
     assert agents["architect"].model == "opus" and "Write" not in agents["architect"].tools
     assert agents["code-writer"].prompt.startswith("Você é o desenvolvedor")
+
+
+def test_doctor_detecta_projeto_instalado(node_project):
+    from agentkit.doctor import run_checks
+    install(node_project, config_from_detection(node_project))
+    checks = {c.name: c for c in run_checks(node_project)}
+    assert checks["Python >= 3.10"].level == "ok"
+    assert checks["pacote agentkit instalado"].level == "ok"
+    assert checks["agentkit.yaml"].level == "ok"
+    assert checks[".claude/agents"].level == "ok"
+
+
+def test_doctor_marca_projeto_sem_agentkit(tmp_path):
+    from agentkit.doctor import run_checks
+    checks = {c.name: c for c in run_checks(tmp_path)}
+    assert checks["projeto instalado neste diretório"].level == "warn"
+
+
+def test_setup_ps1_tem_bom_utf8():
+    # O PowerShell 5.1 lê .ps1 sem BOM como cp1252: os caracteres ─ ✓ viram lixo e o script nem é interpretado.
+    from pathlib import Path
+    raiz = Path(__file__).resolve().parent.parent
+    assert (raiz / "setup.ps1").read_bytes().startswith(b"\xef\xbb\xbf")
