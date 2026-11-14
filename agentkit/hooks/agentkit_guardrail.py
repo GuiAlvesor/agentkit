@@ -30,6 +30,9 @@ SECRET_PATTERNS = {
     "segredo atribuído": r"(?i)(password|passwd|secret|api[_-]?key|access[_-]?token)\s*[:=]\s*['\"][^'\"\s$<{]{8,}['\"]",
 }
 WRITE_HINT = re.compile(r"(>>?|\brm\b|\bmv\b|\bcp\b|\btee\b|\bsed\s+-i|\btruncate\b|\bchmod\b|\bunlink\b)")
+# redirecionamentos que não escrevem em arquivo do projeto (descartar a saída, juntar stderr):
+# sem isto, "ls .env 2>/dev/null" (só leitura) era negado como se alterasse o .env
+HARMLESS_REDIRECT = re.compile(r"\d*>>?\s*(/dev/null|NUL|\$null)\b|\d*>&\d", re.I)
 
 
 def project_dir() -> Path:
@@ -91,7 +94,7 @@ def decide(payload: dict, cfg: dict, root: Path) -> tuple[str, str] | None:
         for pat in cfg.get("blocked_commands", []):
             if re.search(pat, cmd, re.I):
                 return "deny", f"Comando bloqueado pela política do projeto (regra: {pat})."
-        if WRITE_HINT.search(cmd):
+        if WRITE_HINT.search(HARMLESS_REDIRECT.sub(" ", cmd)):
             try:
                 tokens = shlex.split(cmd, posix=True)
             except ValueError:

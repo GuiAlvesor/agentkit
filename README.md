@@ -21,7 +21,7 @@ O guardrail tem duas camadas: o **agente** (julgamento: escopo, dependências su
 ### Pré-requisitos
 - **Python ≥ 3.10** (recomendado 3.12; a versão fixada do projeto está em `.python-version`).
 - **git**.
-- **Claude Code CLI** (`npm install -g @anthropic-ai/claude-code`) para uso interativo **ou** `ANTHROPIC_API_KEY` para uso via Agent SDK/CI.
+- **Claude Code CLI** (`npm install -g @anthropic-ai/claude-code`) para uso interativo e para o Agent SDK (que usa o mesmo login). `ANTHROPIC_API_KEY` só é necessária no CI ou sem o Claude Code.
 - *(Opcional, recomendado)* **pyenv-win** (Windows) ou **pyenv** (macOS/Linux) para gerenciar a versão do Python.
 
 ### Um comando

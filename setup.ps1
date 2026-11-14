@@ -100,7 +100,7 @@ if ($env:ANTHROPIC_API_KEY) {
     Ok "definida"
 } else {
     Warn "ANTHROPIC_API_KEY não está definida."
-    Hint "Necessária só para Agent SDK/CI. Para definir nesta sessão:"
+    Hint "Com o Claude Code logado, não é necessária (o Agent SDK usa o login). Só no CI, ou sem o Claude Code:"
     Hint "    `$env:ANTHROPIC_API_KEY = `"sua-chave`""
     Hint "Para definir permanentemente: [Environment]::SetEnvironmentVariable('ANTHROPIC_API_KEY','...','User')"
 }

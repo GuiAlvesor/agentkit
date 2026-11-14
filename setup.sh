@@ -104,7 +104,7 @@ if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
     ok "definida"
 else
     warn "ANTHROPIC_API_KEY não está definida."
-    hint "Necessária só para Agent SDK/CI. Para definir nesta sessão:"
+    hint "Com o Claude Code logado, não é necessária (o Agent SDK usa o login). Só no CI, ou sem o Claude Code:"
     hint "    export ANTHROPIC_API_KEY=\"sua-chave\""
     hint "Para definir permanentemente, adicione a linha acima ao ~/.bashrc ou ~/.zshrc."
 fi

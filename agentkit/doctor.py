@@ -90,9 +90,12 @@ def _claude_cli() -> Check:
 def _anthropic_key() -> Check:
     if os.environ.get("ANTHROPIC_API_KEY"):
         return Check("ANTHROPIC_API_KEY", "ok", "definida")
+    if shutil.which("claude"):
+        # o Agent SDK (agentkit run/agent/review/release) usa o login do Claude Code quando não há chave
+        return Check("ANTHROPIC_API_KEY", "ok", "não definida (o Agent SDK usa o login do Claude Code)")
     return Check("ANTHROPIC_API_KEY", "warn", "não definida",
-                 "Defina só se for usar o Agent SDK (CI/scripts). "
-                 "Para uso interativo via Claude Code não é necessária.")
+                 "Sem o Claude Code instalado, o Agent SDK precisa da chave. "
+                 "No CI (GitHub Actions) ela é sempre necessária, como secret.")
 
 
 def _agentkit_installed() -> Check:
