@@ -16,6 +16,12 @@ Kit portátil de agentes para levar a qualquer projeto. Você instala uma vez, a
 
 O guardrail tem duas camadas: o **agente** (julgamento: escopo, dependências suspeitas, dados pessoais) e um **hook determinístico** que roda antes de cada comando ou edição e não pode ser "convencido" pelo modelo.
 
+## Tutorial em vídeo (≈ 6 min)
+
+[![Tutorial do AgentKit](docs/tutorial/capa.png)](docs/tutorial/agentkit-tutorial.mp4)
+
+Tudo executado de verdade, do ponto de vista de quem acabou de baixar o kit: clone e `setup.ps1`, `agentkit init` num projeto vazio, requisitos em `requisitos/`, interface gráfica, RAG, `/iniciar-projeto` (perguntas → arquitetura → backlog), duas `/proxima-tarefa` implementadas e revisadas pelos agentes, Agent SDK (`agent`, `review`, `release`, `run`) e o guardrail barrando um `git push --force`. Os trechos longos (instalação e agentes trabalhando) aparecem acelerados, com o tempo real indicado.
+
 ## Instalação
 
 ### Pré-requisitos
@@ -118,6 +124,10 @@ requisitos/                           ← modelo criado uma vez pelo `init`; é 
 ```
 
 **Suas edições são preservadas.** Se você editar à mão um arquivo gerado, a reinstalação não o sobrescreve: a versão nova vai para `arquivo.agentkit-new` (use `--force` ou a opção da interface para sobrescrever). Ao desabilitar um agente, o arquivo dele é removido só se você não o editou.
+
+## Idioma das respostas
+
+Os agentes respondem, resumem e escrevem documentos no idioma de `project.response_language` (padrão: `português do Brasil`; aba **Projeto** da interface). Deixe vazio para não fixar idioma.
 
 ## Controle de modelo
 

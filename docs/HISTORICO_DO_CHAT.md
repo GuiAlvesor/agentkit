@@ -83,3 +83,20 @@ Esse trabalho começou numa cópia em `Documents/agentkit` e foi trazido para a 
   - o instalador só reconhece os marcadores `<!-- agentkit:start/end -->` sozinhos numa linha (um `CLAUDE.md` que citava o marcador no texto foi corrompido; corrigido e coberto por teste).
 
 Próximos passos: veja o roadmap no `CLAUDE.md`.
+
+## 8. Teste completo como usuário e tutorial em vídeo
+
+**Pedido:** testar todos os comandos se colocando no lugar do usuário, gravar um tutorial (CLI, interface e fluxos relevantes) e publicá-lo no GitHub.
+
+**Como foi feito:** clone limpo do GitHub em `C:gentkit-demo\kit`, `setup.ps1`, projeto de exemplo `gorjeta` (calculadora de gorjeta) com requisitos escritos como um usuário faria; `/iniciar-projeto` e duas `/proxima-tarefa` rodadas de verdade com `claude -p`; Agent SDK com o login do Claude Code; interface gravada com Playwright (Edge) e terminal reproduzido a partir das saídas reais. O vídeo está em `docs/tutorial/`.
+
+**Bugs encontrados e corrigidos durante o teste:**
+- regras `Write(...)` no `settings.json` não têm efeito no Claude Code (só `Edit(...)` vale para todas as ferramentas de edição);
+- agentes respondiam em inglês às vezes → `project.response_language` (padrão português do Brasil);
+- o hook negava leituras como `ls .env 2>/dev/null` (tratava o redirecionamento como escrita);
+- `detect` não instalava o extra `[dev]` do `pyproject.toml` (sem pytest para os agentes);
+- `--dry-run` do `init` não avisava sobre `requisitos/`; busca da interface repetia o cabeçalho;
+- `doctor`/setup diziam que o Agent SDK exigia `ANTHROPIC_API_KEY`, mas ele usa o login do Claude Code (a chave só é necessária no CI).
+
+**Observação:** num teste, o resumo do Claude disse que o `git push --force` "pediu aprovação", mas o log do hook (`.claude/agentkit/guardrail.log`) mostra que ele foi **negado** — o hook funcionou; o texto do modelo é que foi impreciso.
+

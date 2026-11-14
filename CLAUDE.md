@@ -56,7 +56,7 @@ O Python do projeto é gerenciado pelo **pyenv-win** (versão fixada em `.python
 pyenv versions                   # versões instaladas; a do projeto vem do .python-version
 .\setup.ps1                      # usa o Python do pyenv, cria .venv e instala com dependências de dev
 .venv\Scripts\Activate.ps1
-pytest -q                        # 43 testes devem passar
+pytest -q                        # 48 testes devem passar
 agentkit doctor                  # checa Python, git, Claude Code, chave de API e o projeto
 agentkit rag index; agentkit rag search "pergunta"   # RAG (só BM25 sem chave)
 agentkit gui                     # interface em http://localhost:8765
