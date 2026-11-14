@@ -16,13 +16,13 @@ def _git_base_branch(root: Path) -> str:
     try:
         out = subprocess.run(
             ["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
-            cwd=root, capture_output=True, text=True, timeout=5,
+            cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=5,
         )
         if out.returncode == 0 and "/" in out.stdout:
             return out.stdout.strip().split("/", 1)[1]
         out = subprocess.run(
             ["git", "branch", "--list", "main", "master", "develop"],
-            cwd=root, capture_output=True, text=True, timeout=5,
+            cwd=root, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=5,
         )
         names = [b.strip(" *") for b in out.stdout.splitlines() if b.strip()]
         for candidate in ("main", "master", "develop"):

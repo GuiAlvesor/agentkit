@@ -21,8 +21,8 @@ def node_project(tmp_path):
     (tmp_path / "package.json").write_text(json.dumps({
         "name": "loja", "scripts": {"test": "vitest", "lint": "eslint .", "build": "vite build",
                                     "deploy": "./scripts/deploy.sh"},
-        "devDependencies": {"typescript": "5", "react": "19", "vite": "6"}}))
-    (tmp_path / "pnpm-lock.yaml").write_text("")
+        "devDependencies": {"typescript": "5", "react": "19", "vite": "6"}}), encoding="utf-8")
+    (tmp_path / "pnpm-lock.yaml").write_text("", encoding="utf-8")
     subprocess.run(["git", "init", "-q", "-b", "main"], cwd=tmp_path, check=True)
     return tmp_path
 
@@ -30,8 +30,8 @@ def node_project(tmp_path):
 @pytest.fixture
 def py_project(tmp_path):
     (tmp_path / "pyproject.toml").write_text('[project]\nname="api"\ndependencies=["fastapi"]\n'
-                                             '[tool.ruff]\n[tool.pytest.ini_options]\n')
-    (tmp_path / "uv.lock").write_text("")
+                                             '[tool.ruff]\n[tool.pytest.ini_options]\n', encoding="utf-8")
+    (tmp_path / "uv.lock").write_text("", encoding="utf-8")
     return tmp_path
 
 
@@ -63,19 +63,19 @@ def test_install_generates_everything(node_project):
     agents = sorted(p.stem for p in (node_project / ".claude/agents").glob("*.md"))
     assert agents == ["architect", "code-reviewer", "code-writer", "deployer",
                       "guardrail", "pr-reviewer", "release-summary"]
-    meta, body = parse_agent_markdown((node_project / ".claude/agents/code-reviewer.md").read_text())
+    meta, body = parse_agent_markdown((node_project / ".claude/agents/code-reviewer.md").read_text(encoding="utf-8"))
     assert meta["name"] == "code-reviewer" and meta["model"] == "claude-sonnet-5-5"
     assert "Write" not in meta["tools"] and "pnpm test" in body
     assert "{{" not in body and "{%" not in body
 
-    settings = json.loads((node_project / ".claude/settings.json").read_text())
+    settings = json.loads((node_project / ".claude/settings.json").read_text(encoding="utf-8"))
     assert settings["model"] == "opus"
     assert "agentkit_guardrail" in settings["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
     assert "Edit(.env)" in settings["permissions"]["deny"]
 
-    claude_md = (node_project / "CLAUDE.md").read_text()
+    claude_md = (node_project / "CLAUDE.md").read_text(encoding="utf-8")
     assert "agentkit:start" in claude_md and "`code-writer`" in claude_md
-    wf = (node_project / ".github/workflows/agentkit-review.yml").read_text()
+    wf = (node_project / ".github/workflows/agentkit-review.yml").read_text(encoding="utf-8")
     assert "${{ secrets.ANTHROPIC_API_KEY }}" in wf
     yaml.safe_load(wf)
     assert cfgmod.load(node_project)["agents"]["code-reviewer"]["model"] == "claude-sonnet-5-5"
@@ -83,23 +83,24 @@ def test_install_generates_everything(node_project):
 
 def test_reinstall_preserves_user_edits(node_project):
     cfg = config_from_detection(node_project)
-    (node_project / "CLAUDE.md").write_text("# Notas minhas\nNão apagar.\n")
+    # simula um CLAUDE.md salvo em "ANSI" (cp1252) por um editor do Windows
+    (node_project / "CLAUDE.md").write_bytes("# Notas minhas\r\nNão apagar.\r\n".encode("cp1252"))
     install(node_project, cfg)
     assert all(i["status"] in ("igual", "atualizar", "mesclar") for i in plan(node_project, cfg))
 
     agent = node_project / ".claude/agents/architect.md"
-    agent.write_text(agent.read_text() + "\nMinha regra manual.\n")
+    agent.write_text(agent.read_text(encoding="utf-8") + "\nMinha regra manual.\n", encoding="utf-8")
     cfg["project"]["conventions"] = "- usar pnpm"
     cfg["agents"]["deployer"]["enabled"] = False
     rep = install(node_project, cfg)
 
     assert ".claude/agents/architect.md" in rep["conflicts"]
-    assert "Minha regra manual." in agent.read_text()
+    assert "Minha regra manual." in agent.read_text(encoding="utf-8")
     assert (node_project / ".claude/agents/architect.md.agentkit-new").exists()
     assert not (node_project / ".claude/agents/deployer.md").exists()
     assert not (node_project / ".claude/commands/deploy.md").exists()
-    text = (node_project / "CLAUDE.md").read_text()
-    assert text.startswith("# Notas minhas") and text.count("agentkit:start") == 1
+    text = (node_project / "CLAUDE.md").read_text(encoding="utf-8")
+    assert text.startswith("# Notas minhas\nNão apagar.") and text.count("agentkit:start") == 1
     assert "`deployer`" not in text
 
 

@@ -47,6 +47,22 @@ def _sha(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def read_user_text(path: Path) -> str:
+    """Lê um arquivo que o usuário pode ter salvo em qualquer editor.
+
+    UTF-8 (com ou sem BOM) primeiro; se falhar, cp1252 (o "ANSI" do Windows em português).
+    O AgentKit sempre regrava em UTF-8.
+    """
+    data = path.read_bytes()
+    try:
+        text = data.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        # bytes indefinidos no cp1252 (ex.: 0x81) viram "?"; aceitável para
+        # arquivos de configuração do AgentKit, que são sempre regravados em UTF-8
+        text = data.decode("cp1252", errors="replace")
+    return text.replace("\r\n", "\n")
+
+
 def enabled_agents(cfg: dict) -> dict[str, dict]:
     return {n: m for n, m in AGENTS.items() if cfg["agents"][n]["enabled"] and not m.get("main_thread")}
 
@@ -152,7 +168,7 @@ def _status(root: Path, rel: str, content: str, manifest: dict) -> str:
     path = root / rel
     if not path.exists():
         return "novo"
-    current = path.read_text(encoding="utf-8", errors="ignore")
+    current = read_user_text(path)
     if current == content:
         return "igual"
     if manifest.get(rel) == _sha(current):
@@ -176,7 +192,7 @@ def plan(project: str | Path, cfg: dict) -> list[dict]:
     if not claude_md.exists():
         out.append({"path": "CLAUDE.md", "status": "novo"})
     else:
-        text = claude_md.read_text(encoding="utf-8")
+        text = read_user_text(claude_md)
         has = MARK_RE.search(text)
         out.append({"path": "CLAUDE.md", "status": "igual" if has and has.group(0) == section
                     else ("atualizar" if has else "adicionar seção")})
@@ -222,7 +238,7 @@ def install(project: str | Path, cfg: dict, force: bool = False) -> dict:
         if rel in files:
             continue
         path = root / rel
-        if path.exists() and (force or _sha(path.read_text(encoding="utf-8", errors="ignore")) == digest):
+        if path.exists() and (force or _sha(read_user_text(path)) == digest):
             path.unlink()
             report["removed"].append(rel)
 
@@ -230,18 +246,19 @@ def install(project: str | Path, cfg: dict, force: bool = False) -> dict:
     claude_md = root / "CLAUDE.md"
     section = render_claude_section(cfg)
     if claude_md.exists():
-        text = claude_md.read_text(encoding="utf-8")
+        text = read_user_text(claude_md)
         new = MARK_RE.sub(lambda _m: section, text, count=1) if MARK_RE.search(text) else text.rstrip() + "\n\n" + section
     else:
+        text = None
         new = section
-    if not claude_md.exists() or new != claude_md.read_text(encoding="utf-8"):
+    if text is None or new != text:
         claude_md.write_text(new, encoding="utf-8")
         report["written"].append("CLAUDE.md")
 
     # settings.json mesclado
     settings_path = root / ".claude" / "settings.json"
     try:
-        existing = json.loads(settings_path.read_text(encoding="utf-8")) if settings_path.exists() else {}
+        existing = json.loads(read_user_text(settings_path)) if settings_path.exists() else {}
     except json.JSONDecodeError:
         existing = {}
         settings_path.rename(settings_path.with_suffix(".json.bak"))
@@ -261,7 +278,7 @@ def install(project: str | Path, cfg: dict, force: bool = False) -> dict:
 def _ensure_gitignore(root: Path) -> None:
     gi = root / ".gitignore"
     lines = [".claude/agentkit/guardrail.log", "*.agentkit-new", ".claude/settings.local.json"]
-    text = gi.read_text(encoding="utf-8") if gi.exists() else ""
+    text = read_user_text(gi) if gi.exists() else ""
     missing = [line for line in lines if line not in text.splitlines()]
     if missing:
         sep = "" if not text or text.endswith("\n") else "\n"
