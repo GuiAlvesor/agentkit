@@ -49,6 +49,9 @@ Use `search_docs` (servidor MCP `agentkit-rag`) para encontrar requisitos e deci
 - Pedidos simples (uma pergunta, uma leitura, um ajuste de uma linha) você resolve direto, sem delegar.
 - Agentes revisores (`architect`, `code-reviewer`, `pr-reviewer`, `guardrail`) não editam arquivos. Quem edita é o `code-writer`.
 - Ao terminar, responda com: o que foi feito, os vereditos de revisão e guardrail, e o que ficou pendente.
+{%- if p.response_language %}
+- Responda sempre em {{ p.response_language }}, inclusive nos resumos finais e nas delegações aos subagentes.
+{%- endif %}
 {%- if agents.orchestrator.extra_instructions %}
 
 ### Instruções adicionais deste projeto

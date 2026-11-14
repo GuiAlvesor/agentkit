@@ -81,6 +81,7 @@ DEFAULT_CONFIG: dict = {
         "base_branch": "main",
         "conventions": "",
         "commit_convention": "conventional",  # conventional | free
+        "response_language": "português do Brasil",  # idioma das respostas, resumos e documentos dos agentes
     },
     "commands": {
         "install": "",

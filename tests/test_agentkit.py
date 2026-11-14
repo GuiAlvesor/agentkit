@@ -203,3 +203,14 @@ def test_detect_python_com_extra_dev(tmp_path):
         '[project]\nname = "x"\n\n[project.optional-dependencies]\ndev = ["pytest>=8"]\n', encoding="utf-8")
     d = detect(tmp_path)
     assert d["commands"]["install"] == 'pip install -e ".[dev]"' and d["commands"]["test"] == "pytest"
+
+
+def test_idioma_das_respostas(tmp_path):
+    cfg = cfgmod.normalize({"project": {"name": "p"}})
+    install(tmp_path, cfg)
+    assert "Responda sempre em português do Brasil" in (tmp_path / "CLAUDE.md").read_text(encoding="utf-8")
+    _, body = parse_agent_markdown((tmp_path / ".claude/agents/code-writer.md").read_text(encoding="utf-8"))
+    assert "em português do Brasil" in body
+    cfg["project"]["response_language"] = ""
+    install(tmp_path, cfg)
+    assert "Responda sempre em" not in (tmp_path / "CLAUDE.md").read_text(encoding="utf-8")

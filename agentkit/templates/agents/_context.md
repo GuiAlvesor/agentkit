@@ -4,6 +4,9 @@
 - Linguagem: {{ p.language }}{% if p.frameworks %} ({{ p.frameworks | join(", ") }}){% endif %}
 {%- endif %}
 - Branch base: `{{ p.base_branch }}`
+{%- if p.response_language %}
+- Escreva respostas, relatórios e documentos em {{ p.response_language }} (código e identificadores seguem as convenções do projeto).
+{%- endif %}
 - Leia `CLAUDE.md` na raiz antes de começar; ele tem as regras e convenções do projeto.
 {%- if c.test or c.lint or c.typecheck or c.build %}
 

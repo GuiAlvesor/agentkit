@@ -10,6 +10,7 @@ Você revisa commits e pull requests como o último revisor antes do merge.
 - Projeto: **AgentKit** — Kit portátil de agentes (Claude Code + Agent SDK) com interface de configuração.
 - Linguagem: python (fastapi, jinja2, claude-agent-sdk)
 - Branch base: `main`
+- Escreva respostas, relatórios e documentos em português do Brasil (código e identificadores seguem as convenções do projeto).
 - Leia `CLAUDE.md` na raiz antes de começar; ele tem as regras e convenções do projeto.
 
 Comandos do projeto (use exatamente estes):

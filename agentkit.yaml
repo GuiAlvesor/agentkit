@@ -20,6 +20,7 @@ project:
 
     - Testes nunca chamam APIs externas.'
   commit_convention: conventional
+  response_language: português do Brasil
 commands:
   install: pip install -e ".[dev]"
   test: pytest -q
